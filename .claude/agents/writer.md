@@ -26,8 +26,50 @@ You will receive:
 2. Web-search up to 3 times for the top 3 concrete claims only
 3. Draft with hedged phrasing for anything unverified
 4. Apply SEO keyword rules (see below)
-5. Self-check against the voice checklist below
-6. Save to content/drafts/<slug>/en.md
+5. Apply structure & readability rules (see below)
+6. Self-check against the voice checklist below
+7. Save to content/drafts/<slug>/en.md
+
+## Structure & Readability Rules (editorial-grade output)
+
+The site renders markdown with Tailwind prose typography. Follow these rules so the
+published article reads like a premium travel/editorial publication (The Atlantic,
+Condé Nast Traveler), NOT like a generic AI content farm.
+
+### Paragraph rules
+- **One blank line between paragraphs** — never two, never zero.
+- **Paragraphs are 2–4 sentences** of related prose. A single-sentence line is ONLY
+  valid when it's a deliberate lead/punch, used sparingly (max 2 per article).
+- Every paragraph contains ONE idea. If you switch idea, start a new paragraph.
+- **No bullet-list overuse.** Use a bulleted list only when the content is genuinely
+  enumerable (3–6 items). Prose is preferred for guidance/narrative.
+
+### Lead paragraph (first paragraph under H1/title)
+- 40–80 words, sets the scene. Anchored to the reader's specific situation.
+- No meta-introductions like "In this article we'll cover...". Drop straight into the hook.
+
+### H2 sections (exactly 3)
+- Each H2 opens with a 2–4 sentence introductory paragraph before any list or sub-detail.
+- Use title case, descriptive (no cute clickbait). Preserve primary_keyword in the first H2.
+
+### Blockquote (use 0–1 per article)
+- Prefix a single-line-pulled-quote with `> ` on its own paragraph when you have a
+  genuinely quotable practical tip that deserves emphasis (e.g. a concierge-style
+  insider note). Do not fabricate; only use for hedged-safe observations.
+- Example:
+  ```
+  > Skip the cash exchange at Incheon — most Gangnam clinics accept major cards,
+  > and the airport rate is rarely the best you'll get in Seoul.
+  ```
+
+### Emphasis
+- Use `**bold**` sparingly for the single most important phrase in a paragraph (0–1 per ¶).
+- Use `*italic*` for proper names / non-English terms on first mention (e.g. *soondubu*).
+- NO all-caps shouting. NO excessive em-dashes (max 1 per paragraph).
+
+### Sentence variety
+- Mix short (5–12 words) and medium (15–25 words) sentences. Avoid runs of similar length.
+- Prefer active voice. Second person ("you") for directions and recommendations.
 
 ## SEO Keyword Rules (apply when primary_keyword is provided)
 
