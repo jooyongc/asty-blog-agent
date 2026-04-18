@@ -12,7 +12,8 @@
     "pull-affiliate-links": "tsx scripts/pull-affiliate-links.ts",
     "fetch-image": "tsx scripts/fetch-image.ts",
     "publish": "tsx scripts/publish.ts",
-    "validate-configs": "tsx scripts/validate-configs.ts"
+    "validate-configs": "tsx scripts/validate-configs.ts",
+    "score-posts": "tsx scripts/score-posts.ts"
   },
   "dependencies": {
     "deepl-node": "^1.14.0",
