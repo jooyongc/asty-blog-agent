@@ -25,14 +25,19 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { parse } from 'csv-parse/sync';
 import matter from 'gray-matter';
+import { loadSiteConfig, resolveSiteId, stripSiteArg } from './_lib/config.js';
 
-const SLUG = process.argv[2];
+const rawArgs = process.argv.slice(2);
+const SITE_ID = resolveSiteId(rawArgs);
+const cfg = loadSiteConfig(SITE_ID);
+const positional = stripSiteArg(rawArgs);
+const SLUG = positional[0];
 if (!SLUG) {
-  console.error('Usage: tsx scripts/enforce-glossary.ts <slug>');
+  console.error('Usage: tsx scripts/enforce-glossary.ts <slug> [--site <id>]');
   process.exit(1);
 }
 
-const DRAFT_DIR = path.join('content', 'drafts', SLUG);
+const DRAFT_DIR = path.join(cfg.paths.drafts, SLUG);
 
 function loadGlossary(csvPath: string): Array<[string, string]> {
   if (!fs.existsSync(csvPath)) return [];
@@ -161,6 +166,6 @@ function processFile(
 }
 
 console.log(`→ Enforcing glossary for ${SLUG}...`);
-processFile('ja.md', 'glossary/ja.csv', enforceJa, 'JA');
-processFile('zh.md', 'glossary/zh.csv', enforceZh, 'ZH');
+processFile('ja.md', path.join(cfg.paths.glossary_dir, 'ja.csv'), enforceJa, 'JA');
+processFile('zh.md', path.join(cfg.paths.glossary_dir, 'zh.csv'), enforceZh, 'ZH');
 console.log('✓ Done. Review any warnings before publishing.');

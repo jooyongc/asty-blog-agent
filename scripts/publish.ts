@@ -15,22 +15,27 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import matter from 'gray-matter';
+import { loadSiteConfig, resolveSiteId, stripSiteArg } from './_lib/config.js';
 
-const SLUG = process.argv[2];
+const rawArgs = process.argv.slice(2);
+const SITE_ID = resolveSiteId(rawArgs);
+const cfg = loadSiteConfig(SITE_ID);
+const positional = stripSiteArg(rawArgs);
+const SLUG = positional[0];
 if (!SLUG) {
-  console.error('Usage: tsx scripts/publish.ts <slug>');
+  console.error('Usage: tsx scripts/publish.ts <slug> [--site <id>]');
   process.exit(1);
 }
 
-const SITE = process.env.ASTY_SITE_URL || 'https://asty-cabin-check.vercel.app';
-const KEY = process.env.ASTY_AGENT_API_KEY;
+const SITE = cfg.site_url;
+const KEY = process.env[cfg.env.api_key];
 if (!KEY) {
-  console.error('ASTY_AGENT_API_KEY missing');
+  console.error(`${cfg.env.api_key} missing`);
   process.exit(1);
 }
 
-const DRAFT_DIR = path.join('content', 'drafts', SLUG);
-const PUBLISHED_DIR = path.join('content', 'published', SLUG);
+const DRAFT_DIR = path.join(cfg.paths.drafts, SLUG);
+const PUBLISHED_DIR = path.join(cfg.paths.published, SLUG);
 
 function readLang(file: string) {
   const raw = fs.readFileSync(path.join(DRAFT_DIR, file), 'utf8');

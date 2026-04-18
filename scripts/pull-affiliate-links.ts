@@ -14,13 +14,17 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { loadSiteConfig, resolveSiteId } from './_lib/config.js';
 
-const SITE = process.env.ASTY_SITE_URL;
-const KEY = process.env.ASTY_AGENT_API_KEY;
-if (!SITE) { console.error('ASTY_SITE_URL missing'); process.exit(1); }
-if (!KEY) { console.error('ASTY_AGENT_API_KEY missing'); process.exit(1); }
+const SITE_ID = resolveSiteId(process.argv.slice(2));
+const cfg = loadSiteConfig(SITE_ID);
 
-const OUT = path.join('affiliate', 'links.json');
+const SITE = cfg.site_url;
+const KEY = process.env[cfg.env.api_key];
+if (!SITE) { console.error('site_url missing in config'); process.exit(1); }
+if (!KEY) { console.error(`${cfg.env.api_key} missing`); process.exit(1); }
+
+const OUT = cfg.paths.affiliate_file ?? path.join('affiliate', 'links.json');
 
 async function main() {
   const url = `${SITE}/api/admin/affiliate-links/export`;

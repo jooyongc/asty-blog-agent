@@ -22,18 +22,26 @@ import * as deepl from 'deepl-node';
 import * as fs from 'fs';
 import * as path from 'path';
 import matter from 'gray-matter';
+import { loadSiteConfig, resolveSiteId, stripSiteArg } from './_lib/config.js';
 
-const SLUG = process.argv[2];
+const rawArgs = process.argv.slice(2);
+const SITE_ID = resolveSiteId(rawArgs);
+const cfg = loadSiteConfig(SITE_ID);
+
+const positional = stripSiteArg(rawArgs);
+const SLUG = positional[0];
 if (!SLUG) {
-  console.error('Usage: tsx scripts/translate.ts <slug>');
+  console.error('Usage: tsx scripts/translate.ts <slug> [--site <id>]');
   process.exit(1);
 }
 
-const MAX_PER_RUN = Number(process.env.DEEPL_MAX_CHARS_PER_RUN ?? 60000);
-const MAX_MONTHLY = Number(process.env.DEEPL_MAX_CHARS_MONTHLY ?? 450000);
-const USAGE_FILE = path.join('content', '.deepl-usage.json');
+const MAX_PER_RUN = cfg.budget?.deepl_chars_per_run
+  ?? Number(process.env.DEEPL_MAX_CHARS_PER_RUN ?? 60000);
+const MAX_MONTHLY = cfg.budget?.deepl_chars_monthly
+  ?? Number(process.env.DEEPL_MAX_CHARS_MONTHLY ?? 450000);
+const USAGE_FILE = path.join(path.dirname(cfg.paths.drafts), '.deepl-usage.json');
 
-const DRAFT_DIR = path.join('content', 'drafts', SLUG);
+const DRAFT_DIR = path.join(cfg.paths.drafts, SLUG);
 const EN_PATH = path.join(DRAFT_DIR, 'en.md');
 if (!fs.existsSync(EN_PATH)) {
   console.error(`Source not found: ${EN_PATH}`);
@@ -98,10 +106,34 @@ type Target = {
   formality: deepl.Formality;
   glossaryId?: string;
 };
-const targets: Target[] = [
-  { lang: 'ja', outFile: 'ja.md', formality: 'more', glossaryId: process.env.DEEPL_GLOSSARY_JA_ID },
-  { lang: 'zh-Hans', outFile: 'zh.md', formality: 'default', glossaryId: process.env.DEEPL_GLOSSARY_ZH_ID },
-];
+
+// Map site config language codes to DeepL language codes + output filenames.
+// Source of truth: site config `languages` array (excludes canonical_lang).
+const DEEPL_LANG_MAP: Record<string, { deepl: deepl.TargetLanguageCode; file: string }> = {
+  ja: { deepl: 'ja', file: 'ja.md' },
+  'zh-hans': { deepl: 'zh-Hans', file: 'zh.md' },
+  'zh-hant': { deepl: 'zh-Hant', file: 'zh.md' },
+  ko: { deepl: 'ko', file: 'ko.md' },
+  fr: { deepl: 'fr', file: 'fr.md' },
+  de: { deepl: 'de', file: 'de.md' },
+  es: { deepl: 'es', file: 'es.md' },
+  it: { deepl: 'it', file: 'it.md' },
+};
+
+const targets: Target[] = cfg.languages
+  .filter(l => l !== cfg.canonical_lang)
+  .map(l => {
+    const map = DEEPL_LANG_MAP[l];
+    if (!map) throw new Error(`[translate] Unsupported target language in config: ${l}`);
+    const glossaryEnvName = cfg.deepl?.glossary_ids?.[l];
+    const formalityRaw = cfg.deepl?.formality?.[l] ?? 'default';
+    return {
+      lang: map.deepl,
+      outFile: map.file,
+      formality: formalityRaw as deepl.Formality,
+      glossaryId: glossaryEnvName ? process.env[glossaryEnvName] : undefined,
+    };
+  });
 
 async function run() {
   const source = fs.readFileSync(EN_PATH, 'utf8');

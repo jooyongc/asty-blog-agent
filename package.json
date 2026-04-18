@@ -11,7 +11,8 @@
     "insert-affiliate": "tsx scripts/insert-affiliate.ts",
     "pull-affiliate-links": "tsx scripts/pull-affiliate-links.ts",
     "fetch-image": "tsx scripts/fetch-image.ts",
-    "publish": "tsx scripts/publish.ts"
+    "publish": "tsx scripts/publish.ts",
+    "validate-configs": "tsx scripts/validate-configs.ts"
   },
   "dependencies": {
     "deepl-node": "^1.14.0",

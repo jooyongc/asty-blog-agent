@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Blog Site Configuration",
+  "description": "Per-site configuration that parameterizes the multi-blog agent pipeline. Add a new sites/<id>/config.json + this schema, and the scripts will work for that site without code changes.",
+  "type": "object",
+  "required": [
+    "site_id",
+    "site_url",
+    "env",
+    "languages",
+    "canonical_lang",
+    "categories",
+    "deepl",
+    "paths"
+  ],
+  "properties": {
+    "site_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Slug identifier, e.g. 'asty-cabin'. Used as folder name."
+    },
+    "site_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Live site URL (no trailing slash)."
+    },
+    "env": {
+      "type": "object",
+      "required": ["api_key"],
+      "properties": {
+        "api_key": {
+          "type": "string",
+          "description": "Env var name for the site's agent API bearer token."
+        }
+      }
+    },
+    "languages": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "description": "Target languages, e.g. ['en', 'ja', 'zh-hans']."
+    },
+    "canonical_lang": {
+      "type": "string",
+      "description": "Source language the writer produces (usually 'en')."
+    },
+    "categories": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "description": "Allowed blog categories for this site."
+    },
+    "deepl": {
+      "type": "object",
+      "properties": {
+        "glossary_ids": {
+          "type": "object",
+          "description": "Map of target language → DeepL glossary ID env var name.",
+          "additionalProperties": { "type": "string" }
+        },
+        "formality": {
+          "type": "object",
+          "description": "Map of target language → formality ('default'|'less'|'more'|'prefer_less'|'prefer_more').",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "paths": {
+      "type": "object",
+      "required": ["glossary_dir", "topic_queue", "voice_guide", "drafts", "published"],
+      "properties": {
+        "glossary_dir": { "type": "string" },
+        "topic_queue": { "type": "string" },
+        "voice_guide": { "type": "string" },
+        "drafts": { "type": "string" },
+        "published": { "type": "string" },
+        "affiliate_file": { "type": "string" }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "properties": {
+        "deepl_chars_per_run": { "type": "integer", "minimum": 1000 },
+        "deepl_chars_monthly": { "type": "integer", "minimum": 10000 }
+      }
+    }
+  }
+}

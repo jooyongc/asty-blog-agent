@@ -1,0 +1,36 @@
+{
+  "$schema": "../config.schema.json",
+  "site_id": "asty-cabin",
+  "site_url": "https://asty-cabin-check.vercel.app",
+  "env": {
+    "api_key": "ASTY_AGENT_API_KEY"
+  },
+  "languages": ["en", "ja", "zh-hans"],
+  "canonical_lang": "en",
+  "categories": [
+    "medical", "beauty", "food", "leisure",
+    "transport", "family", "corporate", "culture"
+  ],
+  "deepl": {
+    "glossary_ids": {
+      "ja": "DEEPL_GLOSSARY_JA_ID",
+      "zh-hans": "DEEPL_GLOSSARY_ZH_ID"
+    },
+    "formality": {
+      "ja": "more",
+      "zh-hans": "default"
+    }
+  },
+  "paths": {
+    "glossary_dir": "glossary",
+    "topic_queue": "topics/manual-queue.md",
+    "voice_guide": "sites/asty-cabin/VOICE.md",
+    "drafts": "content/drafts",
+    "published": "content/published",
+    "affiliate_file": "affiliate/links.json"
+  },
+  "budget": {
+    "deepl_chars_per_run": 40000,
+    "deepl_chars_monthly": 450000
+  }
+}

@@ -20,17 +20,22 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import matter from 'gray-matter';
+import { loadSiteConfig, resolveSiteId, stripSiteArg } from './_lib/config.js';
 
-const SLUG = process.argv[2];
+const rawArgs = process.argv.slice(2);
+const SITE_ID = resolveSiteId(rawArgs);
+const cfg = loadSiteConfig(SITE_ID);
+const positional = stripSiteArg(rawArgs);
+const SLUG = positional[0];
 if (!SLUG) {
-  console.error('Usage: tsx scripts/insert-affiliate.ts <slug>');
+  console.error('Usage: tsx scripts/insert-affiliate.ts <slug> [--site <id>]');
   process.exit(1);
 }
 
 const AFFILIATE_MAX_PER_POST = 3;
-const LINKS_PATH = path.join('affiliate', 'links.json');
-const DRAFT_DIR = path.join('content', 'drafts', SLUG);
-const EN_PATH = path.join(DRAFT_DIR, 'en.md');
+const LINKS_PATH = cfg.paths.affiliate_file ?? path.join('affiliate', 'links.json');
+const DRAFT_DIR = path.join(cfg.paths.drafts, SLUG);
+const EN_PATH = path.join(DRAFT_DIR, `${cfg.canonical_lang}.md`);
 const JA_PATH = path.join(DRAFT_DIR, 'ja.md');
 const ZH_PATH = path.join(DRAFT_DIR, 'zh.md');
 

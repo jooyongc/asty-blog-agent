@@ -17,10 +17,15 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { loadSiteConfig, resolveSiteId, stripSiteArg } from './_lib/config.js';
 
-const SLUG = process.argv[2];
+const rawArgs = process.argv.slice(2);
+const SITE_ID = resolveSiteId(rawArgs);
+const cfg = loadSiteConfig(SITE_ID);
+const positional = stripSiteArg(rawArgs);
+const SLUG = positional[0];
 if (!SLUG) {
-  console.error('Usage: tsx scripts/fetch-image.ts <slug>');
+  console.error('Usage: tsx scripts/fetch-image.ts <slug> [--site <id>]');
   process.exit(1);
 }
 
@@ -30,7 +35,7 @@ if (!KEY) {
   process.exit(1);
 }
 
-const META_PATH = path.join('content', 'drafts', SLUG, 'meta.json');
+const META_PATH = path.join(cfg.paths.drafts, SLUG, 'meta.json');
 if (!fs.existsSync(META_PATH)) {
   console.error(`meta.json not found: ${META_PATH}`);
   process.exit(1);

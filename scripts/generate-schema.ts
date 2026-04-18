@@ -13,16 +13,21 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import matter from 'gray-matter';
+import { loadSiteConfig, resolveSiteId, stripSiteArg } from './_lib/config.js';
 
-const SLUG = process.argv[2];
+const rawArgs = process.argv.slice(2);
+const SITE_ID = resolveSiteId(rawArgs);
+const cfg = loadSiteConfig(SITE_ID);
+const positional = stripSiteArg(rawArgs);
+const SLUG = positional[0];
 if (!SLUG) {
-  console.error('Usage: tsx scripts/generate-schema.ts <slug>');
+  console.error('Usage: tsx scripts/generate-schema.ts <slug> [--site <id>]');
   process.exit(1);
 }
 
-const SITE_URL = process.env.ASTY_SITE_URL || 'https://asty-cabin-check.vercel.app';
-const DRAFT_DIR = path.join('content', 'drafts', SLUG);
-const EN_PATH = path.join(DRAFT_DIR, 'en.md');
+const SITE_URL = cfg.site_url;
+const DRAFT_DIR = path.join(cfg.paths.drafts, SLUG);
+const EN_PATH = path.join(DRAFT_DIR, `${cfg.canonical_lang}.md`);
 const META_PATH = path.join(DRAFT_DIR, 'meta.json');
 
 if (!fs.existsSync(EN_PATH)) {

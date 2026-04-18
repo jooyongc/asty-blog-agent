@@ -1,0 +1,30 @@
+{
+  "$schema": "../config.schema.json",
+  "site_id": "site-b",
+  "site_url": "https://example.com",
+  "env": {
+    "api_key": "SITE_B_AGENT_API_KEY"
+  },
+  "languages": ["en", "ja"],
+  "canonical_lang": "en",
+  "categories": ["travel", "food", "culture"],
+  "deepl": {
+    "glossary_ids": {
+      "ja": "SITE_B_GLOSSARY_JA_ID"
+    },
+    "formality": {
+      "ja": "more"
+    }
+  },
+  "paths": {
+    "glossary_dir": "sites/site-b/glossary",
+    "topic_queue": "sites/site-b/topics/queue.md",
+    "voice_guide": "sites/site-b/VOICE.md",
+    "drafts": "sites/site-b/drafts",
+    "published": "sites/site-b/published"
+  },
+  "budget": {
+    "deepl_chars_per_run": 40000,
+    "deepl_chars_monthly": 450000
+  }
+}
