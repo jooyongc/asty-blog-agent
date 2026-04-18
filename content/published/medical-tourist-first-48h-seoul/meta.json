@@ -1,0 +1,35 @@
+{
+  "slug": "medical-tourist-first-48h-seoul",
+  "category": "medical",
+  "canonical_lang": "en",
+  "publish_at": "2026-04-19T15:00:00Z",
+  "featured_image": {
+    "strategy": "unsplash",
+    "query": "Seoul hospital patient",
+    "url": "https://images.unsplash.com/photo-1575031623944-62a63e5e133f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NjAwMjZ8MHwxfHNlYXJjaHwxfHxTZW91bCUyMGhvc3BpdGFsJTIwcGF0aWVudHxlbnwxfDB8fHwxNzc2NTA2ODI0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+    "alt": "high-rise buildings beside trees",
+    "credit": {
+      "source": "Unsplash",
+      "author": "Jeesung Kim",
+      "author_url": "https://unsplash.com/@jeesungkim99?utm_source=asty_cabin&utm_medium=referral",
+      "image_url": "https://unsplash.com/photos/high-rise-buildings-beside-trees-27tsNxpiVx4?utm_source=asty_cabin&utm_medium=referral"
+    }
+  },
+  "translations": {
+    "en": {
+      "title": "Your First 48 Hours as a Medical Tourist in Seoul",
+      "meta_description": "Navigate your first two days in Seoul for medical treatment. Incheon to Samsung Hospital via ASTY Cabin—step-by-step guide.",
+      "tags": ["medical-tourism", "Seoul", "Samsung-Hospital", "first-time", "travel-guide"]
+    },
+    "ja": {
+      "title": "ソウルでの医療ツーリストとしての最初の48時間",
+      "meta_description": "医療目的でソウルを訪れる最初の2日間をガイドします。仁川空港からASTY Cabin経由でサムスン病院まで、ステップバイステップでご案内。",
+      "tags": ["医療ツーリズム", "ソウル", "サムスン病院", "初めて", "旅行ガイド"]
+    },
+    "zh-hans": {
+      "title": "作为医疗游客在首尔的最初48小时",
+      "meta_description": "指导您在首尔就医的头两天完整行程。从仁川机场经ASTY Cabin前往三星首尔医院的分步详细指南，助您轻松顺利地开始医疗之旅。",
+      "tags": ["医疗旅游", "首尔", "三星医院", "首次", "旅游指南"]
+    }
+  }
+}

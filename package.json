@@ -1,0 +1,23 @@
+{
+  "name": "asty-cabin-blog-agent-lean",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup-glossaries": "tsx scripts/setup-glossaries.ts",
+    "translate": "tsx scripts/translate.ts",
+    "enforce-glossary": "tsx scripts/enforce-glossary.ts",
+    "fetch-image": "tsx scripts/fetch-image.ts",
+    "publish": "tsx scripts/publish.ts"
+  },
+  "dependencies": {
+    "deepl-node": "^1.14.0",
+    "gray-matter": "^4.0.3",
+    "csv-parse": "^5.5.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0",
+    "@types/node": "^20.11.0"
+  }
+}

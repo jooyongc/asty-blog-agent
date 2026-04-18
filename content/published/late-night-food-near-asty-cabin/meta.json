@@ -1,0 +1,35 @@
+{
+  "slug": "late-night-food-near-asty-cabin",
+  "category": "food",
+  "canonical_lang": "en",
+  "publish_at": "2026-04-23T15:00:00Z",
+  "featured_image": {
+    "strategy": "unsplash",
+    "query": "fresh seafood market",
+    "url": "https://images.unsplash.com/photo-1567008247317-91a2b3b4f0b2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NjAwMjZ8MHwxfHNlYXJjaHwyfHxmcmVzaCUyMHNlYWZvb2QlMjBtYXJrZXR8ZW58MXwwfHx8MTc3NjUwNjgzN3ww&ixlib=rb-4.1.0&q=80&w=1080",
+    "alt": "woman wears white and orange crew-neck shirt",
+    "credit": {
+      "source": "Unsplash",
+      "author": "Devi Puspita Amartha Yahya",
+      "author_url": "https://unsplash.com/@deviyahya?utm_source=asty_cabin&utm_medium=referral",
+      "image_url": "https://unsplash.com/photos/woman-wears-white-and-orange-crew-neck-shirt-ZxfFGOvJRE0?utm_source=asty_cabin&utm_medium=referral"
+    }
+  },
+  "translations": {
+    "en": {
+      "title": "Late-Night Food Within 10 Minutes of ASTY Cabin",
+      "meta_description": "Discover 24-hour dining near ASTY Cabin in Seoul. Fresh seafood at Garak Market, Korean comfort food, and late-night restaurants within 10 minutes walk.",
+      "tags": ["late-night-dining", "garak-market", "seoul-food", "asty-cabin", "nightlife"]
+    },
+    "ja": {
+      "title": "ASTY Cabinから10分以内の深夜グルメ",
+      "meta_description": "ソウル松坡区のASTY Cabin近くで夜11時以降も食事できるお店をご紹介。可楽市場の新鮮なシーフード、韓国料理、24時間営業のレストランまで徒歩圏内で楽しめます。",
+      "tags": ["深夜ダイニング", "可楽市場", "ソウルグルメ", "ナイトライフ"]
+    },
+    "zh-hans": {
+      "title": "ASTY Cabin10分钟内的深夜美食",
+      "meta_description": "探索首尔松坡区ASTY Cabin附近的深夜美食。步行即可到达可乐市场新鲜海鲜、韩国家常料理以及24小时营业的餐厅，满足您的深夜饥肠。",
+      "tags": ["深夜美食", "可乐市场", "首尔美食", "夜生活"]
+    }
+  }
+}

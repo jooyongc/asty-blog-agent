@@ -1,0 +1,35 @@
+{
+  "slug": "gangnam-k-beauty-clinics",
+  "category": "beauty",
+  "canonical_lang": "en",
+  "publish_at": "2026-04-21T15:00:00Z",
+  "featured_image": {
+    "strategy": "unsplash",
+    "query": "skincare beauty treatment",
+    "url": "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NjAwMjZ8MHwxfHNlYXJjaHw0fHxza2luY2FyZSUyMGJlYXV0eSUyMHRyZWF0bWVudHxlbnwxfDB8fHwxNzc2NTA2ODQ2fDA&ixlib=rb-4.1.0&q=80&w=1080",
+    "alt": "man wearing mud mask",
+    "credit": {
+      "source": "Unsplash",
+      "author": "Rosa Rafael",
+      "author_url": "https://unsplash.com/@rosarafael?utm_source=asty_cabin&utm_medium=referral",
+      "image_url": "https://unsplash.com/photos/man-wearing-mud-mask-Pe9IXUuC6QU?utm_source=asty_cabin&utm_medium=referral"
+    }
+  },
+  "translations": {
+    "en": {
+      "title": "Gangnam K-Beauty Clinics with English & Japanese Staff",
+      "meta_description": "World-class K-beauty dermatology clinics near Gangnam with English and Japanese-speaking staff. Only 15 minutes from ASTY Cabin.",
+      "tags": ["k-beauty", "gangnam", "dermatology", "thread-lift", "skincare"]
+    },
+    "ja": {
+      "title": "江南のKビューティークリニック：英語・日本語対応",
+      "meta_description": "江南エリアの世界水準Kビューティー皮膚科クリニック。英語・日本語スタッフ常駐。ASTY Cabinからわずか15分でアクセス可能です。",
+      "tags": ["Kビューティー", "江南", "皮膚科", "糸リフト", "スキンケア"]
+    },
+    "zh-hans": {
+      "title": "江南K-Beauty诊所：英语和日语服务",
+      "meta_description": "首尔江南地区世界级K-美容皮肤科诊所，提供英语和日语服务。距松坡区ASTY Cabin仅需15分钟，让您轻松享受顶级韩妆美容体验。",
+      "tags": ["K-美容", "江南", "皮肤科", "线雕", "护肤"]
+    }
+  }
+}
