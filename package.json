@@ -7,6 +7,7 @@
     "setup-glossaries": "tsx scripts/setup-glossaries.ts",
     "translate": "tsx scripts/translate.ts",
     "enforce-glossary": "tsx scripts/enforce-glossary.ts",
+    "generate-schema": "tsx scripts/generate-schema.ts",
     "fetch-image": "tsx scripts/fetch-image.ts",
     "publish": "tsx scripts/publish.ts"
   },
