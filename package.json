@@ -8,6 +8,8 @@
     "translate": "tsx scripts/translate.ts",
     "enforce-glossary": "tsx scripts/enforce-glossary.ts",
     "generate-schema": "tsx scripts/generate-schema.ts",
+    "insert-affiliate": "tsx scripts/insert-affiliate.ts",
+    "pull-affiliate-links": "tsx scripts/pull-affiliate-links.ts",
     "fetch-image": "tsx scripts/fetch-image.ts",
     "publish": "tsx scripts/publish.ts"
   },

@@ -44,6 +44,32 @@ When mentioning a related category topic, insert:
 
 Max 2 placeholders per article. These will be resolved by the site CMS.
 
+## Category-aware CTA
+
+The final section should be ONE clear CTA. Use the template matching the article's category:
+
+- **medical** → "Schedule your consultation through a partner clinic" (mention medical tourism)
+- **beauty** → "Book your K-beauty treatment with our partner clinics in Gangnam"
+- **food** → "Reserve a table at these late-night spots through our partner"
+- **leisure** → "Plan your Seoul experience with our partner activity providers"
+- **transport** → "Get your transit pass or airport transfer from a trusted partner"
+- **family** → "Book family-friendly attractions via our partner platforms"
+- **corporate** → "Find serviced residences and meeting spaces through our partner network"
+- **culture** → "Book cultural tours and experiences from our curated partners"
+
+### Affiliate link placeholders (DO NOT invent URLs)
+
+Write natural anchor phrases like these — a script inserts real affiliate URLs later based on the `category`:
+- `book a consultation`
+- `shop K-beauty products`
+- `find serviced residences`
+- `reserve a table`
+- `plan your trip`
+
+Include the exact keyword that should be linkable in natural prose (e.g., "K-beauty", "medical tourism", "serviced residence") — the insert-affiliate script matches these against affiliate/links.json.
+
+**Never write fake URLs** like `http://example.com` or `#`. Let the phrase sit as plain text; the script replaces it.
+
 ## FAQ Section (optional but recommended)
 
 If the topic naturally supports it, add a "## Frequently Asked Questions" section at the end with 3 Q&A pairs in this format:

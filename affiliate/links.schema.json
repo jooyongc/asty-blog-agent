@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Affiliate Links Database",
+  "type": "object",
+  "required": ["version", "providers", "categories"],
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "updated_at": { "type": ["string", "null"], "format": "date-time" },
+    "providers": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["name", "disclosure", "default_rel"],
+        "properties": {
+          "name": { "type": "string" },
+          "disclosure": { "type": "string" },
+          "default_rel": { "type": "string" }
+        }
+      }
+    },
+    "categories": {
+      "type": "object",
+      "properties": {
+        "medical": { "$ref": "#/definitions/linkArray" },
+        "beauty": { "$ref": "#/definitions/linkArray" },
+        "food": { "$ref": "#/definitions/linkArray" },
+        "leisure": { "$ref": "#/definitions/linkArray" },
+        "transport": { "$ref": "#/definitions/linkArray" },
+        "family": { "$ref": "#/definitions/linkArray" },
+        "corporate": { "$ref": "#/definitions/linkArray" },
+        "culture": { "$ref": "#/definitions/linkArray" }
+      }
+    }
+  },
+  "definitions": {
+    "linkArray": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["provider", "keyword", "url", "anchor"],
+        "properties": {
+          "provider": { "type": "string" },
+          "keyword": { "type": "string", "description": "EN phrase that triggers the link" },
+          "url": { "type": "string", "format": "uri" },
+          "anchor": { "type": "string", "description": "Link text shown to reader" },
+          "anchor_ja": { "type": "string", "description": "Optional JP anchor" },
+          "anchor_zh": { "type": "string", "description": "Optional ZH anchor" },
+          "note": { "type": "string" }
+        }
+      }
+    }
+  }
+}

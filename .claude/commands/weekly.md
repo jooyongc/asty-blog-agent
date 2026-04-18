@@ -4,6 +4,15 @@ description: Full weekly pipeline — curate 3 topics, SEO research, draft each,
 
 Run the complete weekly pipeline. Target total cost: ≤ $2.00.
 
+## Step 0: Pull latest affiliate links (deterministic)
+
+```
+npx tsx scripts/pull-affiliate-links.ts
+```
+
+Fetches the latest affiliate links from the site admin. If it fails (site unreachable),
+continue with whatever is already in affiliate/links.json — this is non-fatal.
+
 ## Step 1: Curate (inline, no subagent)
 
 Read topics/manual-queue.md. Select 3 uncompleted topics by FIFO + priority:high first.
@@ -46,12 +55,17 @@ For each of the 3 selected topics:
    - Uses Haiku 4.5
    - Saves content/drafts/<slug>/meta.json
 
-5. Run schema generation script (deterministic):
+5. Run affiliate link insertion (deterministic, skips if no links configured):
+   ```
+   npx tsx scripts/insert-affiliate.ts <slug>
+   ```
+
+6. Run schema generation script (deterministic):
    ```
    npx tsx scripts/generate-schema.ts <slug>
    ```
 
-6. Run image fetch script:
+7. Run image fetch script:
    ```
    npx tsx scripts/fetch-image.ts <slug>
    ```

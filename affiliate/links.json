@@ -1,0 +1,41 @@
+{
+  "$schema": "./links.schema.json",
+  "version": 1,
+  "updated_at": null,
+  "providers": {
+    "klook": {
+      "name": "Klook",
+      "disclosure": "As a Klook affiliate, we may earn from qualifying purchases.",
+      "default_rel": "sponsored noopener"
+    },
+    "seasie": {
+      "name": "세시에 (Seasie)",
+      "disclosure": "We partner with 세시에 for local experiences. We may earn from qualifying bookings.",
+      "default_rel": "sponsored noopener"
+    },
+    "gondola": {
+      "name": "Gondola",
+      "disclosure": "Hotel booking via Gondola. We may earn from qualifying bookings through our partner links.",
+      "default_rel": "sponsored noopener",
+      "source": "mcp",
+      "mcp_endpoint": "https://mcp.gondola.ai/mcp"
+    }
+  },
+  "categories": {
+    "medical": [],
+    "beauty": [],
+    "food": [],
+    "leisure": [],
+    "transport": [],
+    "family": [],
+    "corporate": [],
+    "culture": []
+  },
+  "_example_entry": {
+    "provider": "klook",
+    "keyword": "medical tourism",
+    "url": "https://www.klook.com/activity/...?aid=YOUR_AFFILIATE_ID",
+    "anchor": "book a medical tourism package",
+    "note": "optional: which specific product/service this is"
+  }
+}
