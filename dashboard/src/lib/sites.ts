@@ -45,22 +45,57 @@ function resolveSitesDir(): string | null {
   return null
 }
 
+// Fallback configs bundled into the dashboard build. Used when the sibling
+// `sites/` directory is not present in the deployment (e.g. on Vercel where
+// only dashboard/ is deployed). Mirrors sites/asty-cabin/config.json.
+const FALLBACK_SITES: SiteConfig[] = [
+  {
+    site_id: 'asty-cabin',
+    site_url: 'https://asty-cabin-check.vercel.app',
+    env: { api_key: 'ASTY_AGENT_API_KEY' },
+    languages: ['en', 'ja', 'zh-hans'],
+    canonical_lang: 'en',
+    categories: [
+      'medical', 'beauty', 'food', 'leisure',
+      'transport', 'family', 'corporate', 'culture',
+    ],
+    deepl: {
+      glossary_ids: { ja: 'DEEPL_GLOSSARY_JA_ID', 'zh-hans': 'DEEPL_GLOSSARY_ZH_ID' },
+      formality: { ja: 'more', 'zh-hans': 'default' },
+    },
+    paths: {
+      glossary_dir: 'glossary',
+      topic_queue: 'topics/manual-queue.md',
+      voice_guide: 'sites/asty-cabin/VOICE.md',
+      drafts: 'content/drafts',
+      published: 'content/published',
+      affiliate_file: 'affiliate/links.json',
+    },
+    budget: { deepl_chars_per_run: 40000, deepl_chars_monthly: 450000 },
+  },
+]
+
 export function listSites(): SiteConfig[] {
   const dir = resolveSitesDir()
-  if (!dir) return []
-  const entries = fs.readdirSync(dir, { withFileTypes: true }).filter(d => d.isDirectory())
-  const result: SiteConfig[] = []
-  for (const e of entries) {
-    const cfgPath = path.join(dir, e.name, 'config.json')
-    if (!fs.existsSync(cfgPath)) continue
-    try {
-      const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8')) as SiteConfig
-      result.push(cfg)
-    } catch {
-      // skip invalid configs
+  if (!dir) return FALLBACK_SITES
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true }).filter(d => d.isDirectory())
+    const result: SiteConfig[] = []
+    for (const e of entries) {
+      const cfgPath = path.join(dir, e.name, 'config.json')
+      if (!fs.existsSync(cfgPath)) continue
+      try {
+        const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8')) as SiteConfig
+        result.push(cfg)
+      } catch {
+        // skip invalid configs
+      }
     }
+    if (result.length === 0) return FALLBACK_SITES
+    return result.sort((a, b) => a.site_id.localeCompare(b.site_id))
+  } catch {
+    return FALLBACK_SITES
   }
-  return result.sort((a, b) => a.site_id.localeCompare(b.site_id))
 }
 
 export function getSite(id: string): SiteConfig | null {

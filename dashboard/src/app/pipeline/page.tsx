@@ -1,6 +1,7 @@
 import { listSites, readDeeplUsage } from '@/lib/sites'
 import { AgentAvatar, Card, CardHead, Chip, Metric, type AgentId } from '@/components/primitives'
 import { Icons } from '@/components/icons'
+import { RunButton } from './run-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,6 +45,8 @@ export default function PipelinePage() {
           에이전트 런타임 상태, DeepL 사용량, 주간 실행 트리거.
         </p>
       </header>
+
+      <RunButton />
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-4">
         <Metric

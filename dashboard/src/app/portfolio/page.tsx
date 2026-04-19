@@ -1,5 +1,6 @@
 import { listSites } from '@/lib/sites'
 import { fetchQueue } from '@/lib/queue-client'
+import { fetchPortfolioMatrix } from '@/lib/portfolio-client'
 import { Card, CardHead, Chip, ProgressBar } from '@/components/primitives'
 import { Icons } from '@/components/icons'
 
@@ -51,14 +52,17 @@ export default async function PortfolioPage() {
     })
   }
 
-  // Topic×Site matrix — mock until graph_entities cross-site rollups ship in Phase 12-3.
-  const matrix: Array<{ entity: string; counts: number[] }> = [
-    { entity: 'Medical tourism', counts: [9, 0, 0] },
-    { entity: 'K-beauty', counts: [6, 1, 0] },
-    { entity: 'Songpa', counts: [5, 0, 0] },
-    { entity: 'Gangnam', counts: [7, 2, 0] },
-    { entity: 'Late-night food', counts: [3, 5, 0] },
-  ]
+  // Topic×Site matrix — real data from graph_entities rolled up by canonical_name.
+  // Returns empty until extract-entities.ts has been run post-publish.
+  const matrixData = sites.length > 0 ? await fetchPortfolioMatrix(sites[0], 12) : null
+  const matrixSites = stats.map((s) => s.site_id)
+  const matrixRows: Array<{ entity: string; type: string; counts: number[]; total: number }> =
+    (matrixData?.entities ?? []).map((e) => ({
+      entity: e.canonical_name,
+      type: e.type,
+      counts: matrixSites.map((sid) => e.per_site[sid] ?? 0),
+      total: e.total,
+    }))
 
   const totalSpent = stats.reduce((n, s) => n + s.spent, 0)
   const totalCeiling = stats.reduce((n, s) => n + s.ceiling, 0)
@@ -172,59 +176,84 @@ export default async function PortfolioPage() {
       <Card>
         <CardHead>
           <div className="text-[13.5px] font-semibold">주제 × 사이트 매트릭스</div>
-          <Chip kind="ghost">mock</Chip>
+          <Chip kind={matrixRows.length > 0 ? 'ok' : 'ghost'} dot>
+            {matrixRows.length > 0 ? 'Live' : 'Empty'}
+          </Chip>
           <div className="flex-1" />
           <span className="text-[11px] text-[color:var(--color-text-3)]">
-            Strategist가 주간 단위로 재조정
+            {matrixRows.length > 0
+              ? `graph_entities 상위 ${matrixRows.length}개`
+              : 'extract-entities.ts 실행 후 채워짐'}
           </span>
         </CardHead>
-        <table className="w-full text-[13px]">
-          <thead className="bg-[color:var(--color-bg-subtle)] text-[11.5px] uppercase tracking-wider text-[color:var(--color-text-3)]">
-            <tr>
-              <th className="text-left px-4 py-2.5 font-medium">엔티티 / 클러스터</th>
-              {stats.map((s) => (
-                <th key={s.site_id} className="text-center px-4 py-2.5 font-medium">
-                  {s.site_id}
-                </th>
-              ))}
-              <th className="text-center px-4 py-2.5 font-medium">주담당</th>
-            </tr>
-          </thead>
-          <tbody>
-            {matrix.map((r) => {
-              const padded = stats.map((_, i) => r.counts[i] ?? 0)
-              const max = Math.max(...padded)
-              const leadIdx = padded.indexOf(max)
-              return (
-                <tr
-                  key={r.entity}
-                  className="border-t border-[color:var(--color-line)]"
-                >
-                  <td className="px-4 py-3 font-medium">{r.entity}</td>
-                  {padded.map((v, i) => (
-                    <td key={i} className="px-4 py-3 text-center">
-                      <div
-                        className="inline-flex items-center justify-center w-8 h-6 rounded-md font-mono font-medium text-[12px]"
-                        style={{
-                          background:
-                            v === 0
-                              ? 'transparent'
-                              : `rgba(47, 111, 78, ${Math.min(1, 0.15 + v * 0.08)})`,
-                          color: v === 0 ? 'var(--color-text-4)' : 'var(--color-accent-ink)',
-                        }}
-                      >
-                        {v}
-                      </div>
+        {matrixRows.length === 0 ? (
+          <div className="p-8 text-center">
+            <div className="text-[color:var(--color-text-3)] text-[13px] mb-2">
+              graph_entities에 데이터가 아직 없습니다.
+            </div>
+            <div className="text-[color:var(--color-text-4)] text-[11.5px] max-w-md mx-auto leading-relaxed">
+              post-publish 훅인{' '}
+              <code className="font-mono px-1 bg-[color:var(--color-bg-muted)] rounded">
+                npx tsx scripts/extract-entities.ts &lt;slug&gt;
+              </code>
+              가 실행되면 엔티티가 쌓이고 이 표에 자동으로 반영됩니다. Lean 프로파일은 격주로 실행되므로 2주 후 의미있는 데이터.
+            </div>
+          </div>
+        ) : (
+          <table className="w-full text-[13px]">
+            <thead className="bg-[color:var(--color-bg-subtle)] text-[11.5px] uppercase tracking-wider text-[color:var(--color-text-3)]">
+              <tr>
+                <th className="text-left px-4 py-2.5 font-medium">엔티티 / 클러스터</th>
+                <th className="text-left px-4 py-2.5 font-medium">유형</th>
+                {stats.map((s) => (
+                  <th key={s.site_id} className="text-center px-4 py-2.5 font-medium">
+                    {s.site_id}
+                  </th>
+                ))}
+                <th className="text-center px-4 py-2.5 font-medium">주담당</th>
+              </tr>
+            </thead>
+            <tbody>
+              {matrixRows.map((r) => {
+                const max = Math.max(...r.counts)
+                const leadIdx = max > 0 ? r.counts.indexOf(max) : -1
+                return (
+                  <tr
+                    key={`${r.type}-${r.entity}`}
+                    className="border-t border-[color:var(--color-line)]"
+                  >
+                    <td className="px-4 py-3 font-medium">{r.entity}</td>
+                    <td className="px-4 py-3 text-[11px] text-[color:var(--color-text-3)]">
+                      {r.type}
                     </td>
-                  ))}
-                  <td className="px-4 py-3 text-center">
-                    {stats[leadIdx] && <Chip kind="ok">{stats[leadIdx].site_id}</Chip>}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+                    {r.counts.map((v, i) => (
+                      <td key={i} className="px-4 py-3 text-center">
+                        <div
+                          className="inline-flex items-center justify-center w-8 h-6 rounded-md font-mono font-medium text-[12px]"
+                          style={{
+                            background:
+                              v === 0
+                                ? 'transparent'
+                                : `rgba(47, 111, 78, ${Math.min(1, 0.15 + v * 0.08)})`,
+                            color:
+                              v === 0 ? 'var(--color-text-4)' : 'var(--color-accent-ink)',
+                          }}
+                        >
+                          {v}
+                        </div>
+                      </td>
+                    ))}
+                    <td className="px-4 py-3 text-center">
+                      {leadIdx >= 0 && stats[leadIdx] && (
+                        <Chip kind="ok">{stats[leadIdx].site_id}</Chip>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
       </Card>
     </div>
   )

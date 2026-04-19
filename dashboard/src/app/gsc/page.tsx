@@ -1,47 +1,75 @@
 'use client'
 
-import { useState } from 'react'
-import { Card, CardHead, Chip, Metric, Segmented, Button } from '@/components/primitives'
+import { useEffect, useState } from 'react'
+import { Card, CardHead, Chip, Metric, Segmented } from '@/components/primitives'
 import { Icons } from '@/components/icons'
 
-// Phase 10 — Google Search Console integration.
-// This view renders against mock data until the site-repo's /api/admin/gsc/export
-// endpoint is wired (Phase 10-1). Adding the endpoint later requires no changes here
-// beyond swapping the data source.
-
 type Row = {
-  kw: string
-  pos: number
+  query: string
+  page: string
   clicks: number
-  impr: number
-  ctr: number
-  status: 'striking' | 'top' | 'opportunity'
+  impressions: number
+  avg_position: number
+  avg_ctr: number
 }
 
-const ROWS: Row[] = [
-  { kw: 'seoul cabin retreat winter', pos: 12, clicks: 42, impr: 1240, ctr: 3.4, status: 'striking' },
-  { kw: 'serviced residence songpa', pos: 8, clicks: 118, impr: 2310, ctr: 5.1, status: 'striking' },
-  { kw: 'k-beauty clinic gangnam english', pos: 4, clicks: 204, impr: 1890, ctr: 10.8, status: 'top' },
-  { kw: 'samsung seoul hospital international', pos: 18, clicks: 12, impr: 980, ctr: 1.2, status: 'striking' },
-  { kw: 'medical tourism seoul 2 days', pos: 24, clicks: 3, impr: 410, ctr: 0.7, status: 'opportunity' },
-  { kw: 'jamsil 24 hour food', pos: 9, clicks: 66, impr: 1620, ctr: 4.1, status: 'striking' },
-]
+type Resp = {
+  site_id: string
+  window_days: number
+  mode: string
+  rows: Row[]
+  generated_at: string
+}
 
-type Filter = 'all' | 'striking' | 'top'
+type Mode = 'striking' | 'top'
+
+const SITE_ID = 'asty-cabin'
 
 export default function GSCPage() {
-  const [filter, setFilter] = useState<Filter>('all')
-  const rows = ROWS.filter((r) =>
-    filter === 'all' ? true : filter === 'top' ? r.status === 'top' : r.status === 'striking'
-  )
+  const [mode, setMode] = useState<Mode>('striking')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [data, setData] = useState<Resp | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    fetch(`/api/gsc?site_id=${SITE_ID}&mode=${mode}&window_days=28&limit=50`)
+      .then(async (r) => {
+        const text = await r.text()
+        if (cancelled) return
+        if (!r.ok) {
+          setError(`HTTP ${r.status}: ${text.slice(0, 200)}`)
+          setData(null)
+        } else {
+          setData(JSON.parse(text) as Resp)
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) setError((e as Error).message)
+      })
+      .finally(() => !cancelled && setLoading(false))
+    return () => {
+      cancelled = true
+    }
+  }, [mode])
+
+  const rows = data?.rows ?? []
+  const totalClicks = rows.reduce((n, r) => n + r.clicks, 0)
+  const totalImpressions = rows.reduce((n, r) => n + r.impressions, 0)
+  const avgPosition =
+    rows.length > 0
+      ? (rows.reduce((n, r) => n + r.avg_position, 0) / rows.length).toFixed(1)
+      : '—'
 
   return (
     <div>
       <header className="mb-6">
         <h1 className="text-[22px] font-semibold tracking-[-0.02em] m-0">
           Search Console{' '}
-          <Chip kind="ghost" className="ml-1.5 align-middle">
-            Phase 10
+          <Chip kind={rows.length > 0 ? 'ok' : 'ghost'} dot className="ml-1.5 align-middle">
+            {rows.length > 0 ? 'Live' : 'Empty'}
           </Chip>
         </h1>
         <p className="text-[13.5px] text-[color:var(--color-text-3)] mt-1">
@@ -50,73 +78,119 @@ export default function GSCPage() {
       </header>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-4">
-        <Metric label="총 클릭 (28일)" value="1,284" delta="+18% 전월" deltaKind="ok" />
-        <Metric label="노출" value="24.6k" delta="GSC 프록시" />
-        <Metric label="평균 순위" value="14.2" delta="전주 대비 −2.1" deltaKind="ok" />
-        <Metric label="Striking 키워드" value="38" delta="다음 작성에 반영" />
+        <Metric
+          label="총 클릭 (28일)"
+          value={rows.length > 0 ? totalClicks.toLocaleString() : '—'}
+          delta={rows.length > 0 ? `${mode} 상위 ${rows.length}개 합산` : 'GSC 데이터 없음'}
+        />
+        <Metric
+          label="노출"
+          value={rows.length > 0 ? totalImpressions.toLocaleString() : '—'}
+        />
+        <Metric label="평균 순위" value={avgPosition} />
+        <Metric
+          label="매칭 키워드"
+          value={rows.length}
+          delta={mode === 'striking' ? '순위 8–20' : '순위 1–7'}
+        />
       </section>
 
       <Card>
         <CardHead>
-          <div className="text-[13.5px] font-semibold">상위 기회</div>
+          <div className="text-[13.5px] font-semibold">
+            {mode === 'striking' ? 'Striking-distance' : 'Top 10'} 키워드
+          </div>
           <div className="flex-1" />
-          <Segmented<Filter>
-            value={filter}
-            onChange={setFilter}
+          <Segmented<Mode>
+            value={mode}
+            onChange={setMode}
             options={[
-              { value: 'all', label: '전체' },
               { value: 'striking', label: 'Striking' },
               { value: 'top', label: 'Top 10' },
             ]}
           />
         </CardHead>
-        <table className="w-full text-[13px]">
-          <thead className="bg-[color:var(--color-bg-subtle)] text-[11.5px] uppercase tracking-wider text-[color:var(--color-text-3)]">
-            <tr>
-              <th className="text-left px-4 py-2.5 font-medium">키워드</th>
-              <th className="text-left px-4 py-2.5 font-medium">순위</th>
-              <th className="text-left px-4 py-2.5 font-medium">클릭</th>
-              <th className="text-left px-4 py-2.5 font-medium">노출</th>
-              <th className="text-left px-4 py-2.5 font-medium">CTR</th>
-              <th className="text-left px-4 py-2.5 font-medium">상태</th>
-              <th className="px-4 py-2.5" />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr
-                key={r.kw}
-                className="border-t border-[color:var(--color-line)] hover:bg-[color:var(--color-bg-subtle)]"
-              >
-                <td className="px-4 py-3 font-mono text-[12.5px]">{r.kw}</td>
-                <td className="px-4 py-3 font-mono tabular-nums">{r.pos}</td>
-                <td className="px-4 py-3 font-mono tabular-nums">{r.clicks}</td>
-                <td className="px-4 py-3 font-mono tabular-nums">{r.impr.toLocaleString()}</td>
-                <td className="px-4 py-3 font-mono tabular-nums">{r.ctr}%</td>
-                <td className="px-4 py-3">
-                  <Chip kind={r.status === 'top' ? 'ok' : r.status === 'striking' ? 'warn' : 'ghost'} dot>
-                    {r.status}
-                  </Chip>
-                </td>
-                <td className="px-4 py-3">
-                  <Button size="sm" disabled>
-                    <Icons.Plus size={11} /> 큐에 추가
-                  </Button>
-                </td>
+        {loading ? (
+          <div className="p-8 text-center text-[13px] text-[color:var(--color-text-3)]">
+            GSC 데이터 로딩 중…
+          </div>
+        ) : error ? (
+          <div
+            className="m-3 px-3 py-2.5 rounded-md text-[12px]"
+            style={{ background: 'var(--color-err-soft)', color: 'var(--color-err)' }}
+          >
+            ⚠ {error}
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="p-8 text-center">
+            <div className="text-[color:var(--color-text-3)] text-[13px] mb-2">
+              GSC 데이터가 아직 없습니다.
+            </div>
+            <div className="text-[color:var(--color-text-4)] text-[11.5px] max-w-md mx-auto leading-relaxed">
+              <code className="font-mono px-1 bg-[color:var(--color-bg-muted)] rounded">
+                GSC_SERVICE_ACCOUNT_JSON
+              </code>{' '}
+              +{' '}
+              <code className="font-mono px-1 bg-[color:var(--color-bg-muted)] rounded">
+                GSC_SITE_URL
+              </code>
+              을 사이트 Vercel env에 추가하고{' '}
+              <code className="font-mono px-1 bg-[color:var(--color-bg-muted)] rounded">
+                npx tsx scripts/pull-gsc.ts
+              </code>
+              로 첫 수집을 돌리면 이 표가 자동으로 채워집니다.
+            </div>
+          </div>
+        ) : (
+          <table className="w-full text-[13px]">
+            <thead className="bg-[color:var(--color-bg-subtle)] text-[11.5px] uppercase tracking-wider text-[color:var(--color-text-3)]">
+              <tr>
+                <th className="text-left px-4 py-2.5 font-medium">키워드</th>
+                <th className="text-left px-4 py-2.5 font-medium">페이지</th>
+                <th className="text-right px-4 py-2.5 font-medium">순위</th>
+                <th className="text-right px-4 py-2.5 font-medium">클릭</th>
+                <th className="text-right px-4 py-2.5 font-medium">노출</th>
+                <th className="text-right px-4 py-2.5 font-medium">CTR</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr
+                  key={`${r.query}-${r.page}`}
+                  className="border-t border-[color:var(--color-line)] hover:bg-[color:var(--color-bg-subtle)]"
+                >
+                  <td className="px-4 py-3 font-mono text-[12.5px]">{r.query}</td>
+                  <td className="px-4 py-3 text-[11px] text-[color:var(--color-text-3)] truncate max-w-[240px]">
+                    {r.page.replace(/^https?:\/\/[^/]+/, '')}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono tabular-nums">
+                    {r.avg_position.toFixed(1)}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono tabular-nums">{r.clicks}</td>
+                  <td className="px-4 py-3 text-right font-mono tabular-nums">
+                    {r.impressions.toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono tabular-nums">
+                    {(r.avg_ctr * 100).toFixed(1)}%
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </Card>
 
-      <div
-        className="mt-4 px-3 py-2 rounded-md text-[11.5px]"
-        style={{
-          background: 'var(--color-warn-soft)',
-          color: 'var(--color-warn)',
-        }}
-      >
-        ⓘ Phase 10-1: GSC 서비스 계정 연동 후 실데이터로 전환됩니다. 현재는 목업.
+      {data && (
+        <div className="text-[11px] text-[color:var(--color-text-3)] mt-3 text-right tabular-nums">
+          생성: {new Date(data.generated_at).toLocaleString('ko')} · 윈도우 {data.window_days}일
+        </div>
+      )}
+
+      <div className="mt-3.5">
+        <Icons.Warn size={10} />{' '}
+        <span className="text-[11px] text-[color:var(--color-text-3)]">
+          Note: GSC는 집계 결과 반영에 2–3일 지연이 있습니다.
+        </span>
       </div>
     </div>
   )

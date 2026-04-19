@@ -143,25 +143,134 @@ function buildFaqSchema(faqs: FaqItem[]): object {
   };
 }
 
-// ---- Main ----
+// ---- HowTo detection ----
+type HowToStep = { name: string; text: string };
 
-const source = fs.readFileSync(EN_PATH, 'utf8');
-const { data: fm, content: body } = matter(source);
-const meta = JSON.parse(fs.readFileSync(META_PATH, 'utf8')) as Record<string, unknown>;
+/**
+ * Detect a HowTo pattern by locating a numbered-step list under an H2
+ * whose title contains a "how to / step / getting there" keyword.
+ * Returns [] if no plausible HowTo is found.
+ */
+function parseHowTo(body: string): { name: string | null; steps: HowToStep[] } {
+  const headingRegex = /##\s+(.+?)\n([\s\S]*?)(?=\n##\s|$)/g;
+  const triggers = /(how to|how\s+do|step[-\s]?by[-\s]?step|getting there|directions|walk\s+from|route|itinerary)/i;
+  for (const match of body.matchAll(headingRegex)) {
+    const heading = match[1].trim();
+    const section = match[2];
+    if (!triggers.test(heading)) continue;
 
-const faqs = parseFaq(body);
-const schemas: object[] = [
-  buildArticleSchema(fm, meta),
-  buildBreadcrumbSchema(meta),
-];
-if (faqs.length > 0) {
-  schemas.push(buildFaqSchema(faqs));
-  console.log(`  + FAQPage schema (${faqs.length} Q&A pairs)`);
+    // Collect numbered steps ("1. ...", "2. ..."). Must have at least 3 consecutive.
+    const stepLines = section
+      .split(/\n/)
+      .filter((l) => /^\s*\d+\.\s+/.test(l))
+      .map((l) => l.replace(/^\s*\d+\.\s+/, '').trim())
+      .filter((l) => l.length >= 10);
+    if (stepLines.length < 3) continue;
+
+    const steps: HowToStep[] = stepLines.slice(0, 8).map((text, i) => ({
+      name: `Step ${i + 1}`,
+      text,
+    }));
+    return { name: heading, steps };
+  }
+  return { name: null, steps: [] };
 }
 
-meta.schema = schemas;
-fs.writeFileSync(META_PATH, JSON.stringify(meta, null, 2));
+function buildHowToSchema(name: string, steps: HowToStep[]): object {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name,
+    step: steps.map((s, i) => ({
+      '@type': 'HowToStep',
+      position: i + 1,
+      name: s.name,
+      text: s.text,
+    })),
+  };
+}
 
-console.log(`✓ Schema generated for ${SLUG}`);
-console.log(`  Article + BreadcrumbList${faqs.length > 0 ? ' + FAQPage' : ''}`);
-console.log(`  Updated: ${META_PATH}`);
+// ---- Mentions from graph entities ----
+
+async function fetchMentions(body: string): Promise<object[]> {
+  const apiBase = process.env.ASTY_SITE_URL || SITE_URL;
+  const apiKeyName = process.env.BLOG_SITE_API_KEY_VAR || 'ASTY_AGENT_API_KEY';
+  const key = process.env[apiKeyName];
+  if (!key) return [];
+  try {
+    const haystack = body.toLowerCase();
+    // Pull hot entities (global + site) to match against body text.
+    const res = await fetch(`${apiBase}/api/admin/graph/suggest-links`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ site_id: cfg.site_id, draft_text: body, limit: 1 }),
+    });
+    if (!res.ok) return [];
+    // suggest-links returns anchor_candidates; re-request the entities directly.
+    // Instead, use the cheap entity list from the response's matched_entities hint
+    // by querying the graph/export?entity= for each top candidate is expensive —
+    // we'll just do a simple name match against the draft body using a secondary
+    // endpoint: /api/admin/graph/entities?q=... is not defined, so we stick with
+    // anchor_candidates from suggest-links for the `mentions` field.
+    const data = (await res.json()) as {
+      suggestions?: Array<{ anchor_candidates: string[] }>;
+    };
+    const names = new Set<string>();
+    for (const s of data.suggestions ?? []) {
+      for (const a of s.anchor_candidates) {
+        if (a && a.length >= 3 && haystack.includes(a.toLowerCase())) names.add(a);
+      }
+    }
+    return Array.from(names).slice(0, 12).map((n) => ({
+      '@type': 'Thing',
+      name: n,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ---- Main ----
+
+async function main(): Promise<void> {
+  const source = fs.readFileSync(EN_PATH, 'utf8');
+  const { data: fm, content: body } = matter(source);
+  const meta = JSON.parse(fs.readFileSync(META_PATH, 'utf8')) as Record<string, unknown>;
+
+  const article = buildArticleSchema(fm, meta) as Record<string, unknown>;
+
+  // Inject `mentions` when graph-backed entity names are found in the draft.
+  const mentions = await fetchMentions(body);
+  if (mentions.length > 0) {
+    article.mentions = mentions;
+  }
+
+  const schemas: object[] = [article, buildBreadcrumbSchema(meta)];
+  const extras: string[] = [];
+
+  const faqs = parseFaq(body);
+  if (faqs.length > 0) {
+    schemas.push(buildFaqSchema(faqs));
+    extras.push(`FAQPage(${faqs.length})`);
+  }
+
+  const howTo = parseHowTo(body);
+  if (howTo.steps.length > 0 && howTo.name) {
+    schemas.push(buildHowToSchema(howTo.name, howTo.steps));
+    extras.push(`HowTo(${howTo.steps.length} steps)`);
+  }
+
+  if (mentions.length > 0) extras.push(`mentions(${mentions.length})`);
+
+  meta.schema = schemas;
+  fs.writeFileSync(META_PATH, JSON.stringify(meta, null, 2));
+
+  console.log(`✓ Schema generated for ${SLUG}`);
+  console.log(`  Article + BreadcrumbList${extras.length ? ' + ' + extras.join(' + ') : ''}`);
+  console.log(`  Updated: ${META_PATH}`);
+}
+
+main().catch((e) => {
+  console.error(`[generate-schema] ${e instanceof Error ? e.message : e}`);
+  process.exit(1);
+});
