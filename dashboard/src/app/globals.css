@@ -1,19 +1,174 @@
 @import "tailwindcss";
 
+/* -----------------------------------------------------------------------
+   ASTY Blog Agent — Notion/Supabase warm-neutral palette.
+   Ported from Claude Design handoff (design-source/styles.css).
+   Prefer these tokens over raw hex values everywhere in the dashboard.
+   ----------------------------------------------------------------------- */
+
 @theme {
-  --color-background: #ffffff;
-  --color-foreground: #0a0a0a;
-  --color-muted: #f5f5f5;
-  --color-muted-foreground: #737373;
-  --color-border: #e5e5e5;
-  --color-success: #16a34a;
-  --color-warning: #f59e0b;
-  --color-danger: #dc2626;
+  /* Surfaces */
+  --color-bg: #fafaf8;
+  --color-bg-elev: #ffffff;
+  --color-bg-muted: #f4f4f1;
+  --color-bg-subtle: #f7f7f4;
+  --color-bg-hover: #f0efea;
+
+  /* Text */
+  --color-text: #191918;
+  --color-text-2: #4a4a45;
+  --color-text-3: #82827a;
+  --color-text-4: #b3b3a9;
+
+  /* Lines */
+  --color-line: #ebebe5;
+  --color-line-2: #e0e0d8;
+  --color-line-3: #d4d4ca;
+
+  /* Brand — cabin pine */
+  --color-accent: #2f6f4e;
+  --color-accent-soft: #e8f1eb;
+  --color-accent-soft-2: #d7e7db;
+  --color-accent-ink: #1d4a34;
+
+  --color-amber: #b66f1c;
+  --color-amber-soft: #fbf1e2;
+  --color-amber-ink: #8a4f0f;
+  --color-rose: #b8445c;
+  --color-rose-soft: #fbe7ec;
+  --color-violet: #6a4aa8;
+  --color-violet-soft: #ece7f7;
+  --color-blue: #2f68c4;
+  --color-blue-soft: #e4edfb;
+
+  /* Language chips */
+  --color-lang-en: #2f68c4;
+  --color-lang-en-soft: #e4edfb;
+  --color-lang-ja: #b8445c;
+  --color-lang-ja-soft: #fbe7ec;
+  --color-lang-zh: #b66f1c;
+  --color-lang-zh-soft: #fbf1e2;
+
+  /* Agent accents */
+  --color-agent-director: #1d4a34;
+  --color-agent-director-soft: #d7e7db;
+  --color-agent-seo: #176a6a;
+  --color-agent-seo-soft: #d5ecec;
+  --color-agent-writer: #2f6f4e;
+  --color-agent-writer-soft: #e8f1eb;
+  --color-agent-verifier: #8a4f0f;
+  --color-agent-verifier-soft: #f5e4cc;
+  --color-agent-translate: #2f68c4;
+  --color-agent-translate-soft: #e4edfb;
+  --color-agent-glossary: #6a4aa8;
+  --color-agent-glossary-soft: #ece7f7;
+  --color-agent-packager: #b66f1c;
+  --color-agent-packager-soft: #fbf1e2;
+  --color-agent-linker: #6a4aa8;
+  --color-agent-linker-soft: #ece7f7;
+  --color-agent-image: #b8445c;
+  --color-agent-image-soft: #fbe7ec;
+  --color-agent-publish: #191918;
+  --color-agent-publish-soft: #f0efea;
+
+  /* Status */
+  --color-ok: #1f7a4e;
+  --color-ok-soft: #e3f1e8;
+  --color-warn: #a86b10;
+  --color-warn-soft: #fbf1e2;
+  --color-err: #b1344d;
+  --color-err-soft: #fbe7ec;
+
+  --shadow-xs: 0 1px 2px rgba(20, 20, 18, 0.04);
+  --shadow-sm: 0 1px 3px rgba(20, 20, 18, 0.06), 0 1px 1px rgba(20, 20, 18, 0.03);
+  --shadow-md: 0 6px 20px rgba(20, 20, 18, 0.06), 0 2px 6px rgba(20, 20, 18, 0.04);
+  --shadow-lg: 0 18px 48px rgba(20, 20, 18, 0.1), 0 4px 12px rgba(20, 20, 18, 0.05);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --font-sans: "Inter", "Pretendard", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular,
+    Menlo, monospace;
+  --font-serif: "Instrument Serif", "Noto Serif KR", Georgia, serif;
+}
+
+/* ---- Base ---- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-bg);
   -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01", "cv11";
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-line-2);
+  border-radius: 10px;
+  border: 2px solid var(--color-bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-line-3);
+}
+
+/* ---- Animations used by primitives ---- */
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+@keyframes dashflow {
+  to { stroke-dashoffset: -16; }
+}
+
+@keyframes ripple {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
 }

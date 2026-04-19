@@ -1,7 +1,40 @@
 import type { Metadata } from 'next'
-import './globals.css'
-import Link from 'next/link'
 import { cookies } from 'next/headers'
+import { Inter, JetBrains_Mono, Instrument_Serif, Noto_Sans_JP, Noto_Sans_SC } from 'next/font/google'
+import './globals.css'
+import { AppShell } from '@/components/app-shell'
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+})
+const jetBrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains-mono',
+  weight: ['400', '500', '600'],
+  display: 'swap',
+})
+const instrumentSerif = Instrument_Serif({
+  subsets: ['latin'],
+  variable: '--font-instrument-serif',
+  weight: ['400'],
+  style: ['normal', 'italic'],
+  display: 'swap',
+})
+const notoJP = Noto_Sans_JP({
+  subsets: ['latin'],
+  variable: '--font-noto-jp',
+  weight: ['400', '500', '600'],
+  display: 'swap',
+})
+const notoSC = Noto_Sans_SC({
+  subsets: ['latin'],
+  variable: '--font-noto-sc',
+  weight: ['400', '500', '600'],
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'Blog Agent Dashboard',
@@ -17,30 +50,15 @@ async function isAuthed(): Promise<boolean> {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const authed = await isAuthed()
+  const fontVars = `${inter.variable} ${jetBrainsMono.variable} ${instrumentSerif.variable} ${notoJP.variable} ${notoSC.variable}`
   return (
-    <html lang="en" className="h-full">
+    <html lang="ko" className={`h-full ${fontVars}`}>
       <body className="min-h-full flex flex-col">
         {authed ? (
-          <header className="border-b bg-white sticky top-0 z-20">
-            <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-14">
-              <div className="flex items-center gap-6">
-                <Link href="/" className="font-semibold tracking-tight">Blog Agent</Link>
-                <nav className="flex gap-5 text-sm text-gray-600">
-                  <Link href="/" className="hover:text-gray-900">Sites</Link>
-                  <Link href="/pipeline" className="hover:text-gray-900">Pipeline</Link>
-                  <Link href="/reports" className="hover:text-gray-900">Reports</Link>
-                </nav>
-              </div>
-              <form action="/api/auth/logout" method="POST">
-                <button className="text-xs text-gray-500 hover:text-gray-900">Logout</button>
-              </form>
-            </div>
-          </header>
-        ) : null}
-        <main className="flex-1">{children}</main>
-        <footer className="border-t bg-gray-50 py-4 px-6 text-xs text-gray-500">
-          asty-blog-agent-dashboard — private control panel
-        </footer>
+          <AppShell>{children}</AppShell>
+        ) : (
+          <main className="flex-1">{children}</main>
+        )}
       </body>
     </html>
   )
