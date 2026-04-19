@@ -1,0 +1,63 @@
+name: Weekly Pipeline
+
+on:
+  schedule:
+    # Every Monday 06:00 KST = Sunday 21:00 UTC
+    - cron: '0 21 * * 0'
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Max number of topics to process (1-5)'
+        required: false
+        default: '3'
+      dry_run:
+        description: 'Stop after Writer (no publish)'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: weekly-pipeline
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Run weekly-auto pipeline
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ASTY_AGENT_API_KEY: ${{ secrets.ASTY_AGENT_API_KEY }}
+          DEEPL_API_KEY: ${{ secrets.DEEPL_API_KEY }}
+          UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
+          ASTY_SITE_URL: ${{ secrets.ASTY_SITE_URL || 'https://asty-cabin-check.vercel.app' }}
+        run: |
+          ARGS="--site=asty-cabin --limit=${{ inputs.limit || '3' }}"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          echo "Running: npx tsx scripts/weekly-auto.mts $ARGS"
+          npx tsx scripts/weekly-auto.mts $ARGS
+
+      - name: Upload drafts (if any)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-drafts-${{ github.run_id }}
+          path: |
+            content/drafts/
+            content/published/
+          if-no-files-found: ignore
+          retention-days: 7
