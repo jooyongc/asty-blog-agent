@@ -209,3 +209,7 @@ ASTY Cabin 파일럿을 "검증된 레퍼런스"로 고정한 뒤, 설정 중심
 - 4주 내: "주제→발행" 자동 루프 + GA 기반 리포트 운영
 - 8주 내: 두 번째 사이트 온보딩 완료
 - 12주 내: 성과기반 리라이트 자동 큐 운영
+
+## Related Upgrade Plan
+
+- Phase 7~12 보완 계획: `docs/multi-blog-monetization/PHASE-7-12-UPGRADE-PLAN.md`
