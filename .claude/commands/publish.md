@@ -23,6 +23,11 @@ This is a deterministic script — no Claude call here.
 On success:
 - Moves content/drafts/$ARGUMENTS/ to content/published/$ARGUMENTS/
 - Reports live URLs for en/ja/zh
+- Run post-publish entity extraction (non-fatal, biweekly mode by default):
+  ```
+  npx tsx scripts/extract-entities.ts $ARGUMENTS
+  ```
+  Failure here does NOT fail the publish — the graph is eventually consistent.
 
 On failure:
 - Show error verbatim

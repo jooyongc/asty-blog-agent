@@ -13,16 +13,20 @@
     "fetch-image": "tsx scripts/fetch-image.ts",
     "publish": "tsx scripts/publish.ts",
     "validate-configs": "tsx scripts/validate-configs.ts",
-    "score-posts": "tsx scripts/score-posts.ts"
+    "score-posts": "tsx scripts/score-posts.ts",
+    "verify-draft": "tsx scripts/verify-draft.ts",
+    "extract-entities": "tsx scripts/extract-entities.ts",
+    "graph-sanity": "tsx scripts/graph-sanity.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
+    "csv-parse": "^5.5.0",
     "deepl-node": "^1.14.0",
-    "gray-matter": "^4.0.3",
-    "csv-parse": "^5.5.0"
+    "gray-matter": "^4.0.3"
   },
   "devDependencies": {
+    "@types/node": "^20.11.0",
     "tsx": "^4.7.0",
-    "typescript": "^5.4.0",
-    "@types/node": "^20.11.0"
+    "typescript": "^5.4.0"
   }
 }
