@@ -1,8 +1,8 @@
 ---
-description: Full weekly pipeline — curate 3 topics, SEO research, draft each, translate, package. Runs once per week.
+description: Full weekly pipeline — curate 3 topics, SEO research, draft each, verify claims, translate, package. Runs once per week.
 ---
 
-Run the complete weekly pipeline. Target total cost: ≤ $2.00.
+Run the complete weekly pipeline. Target total cost: ≤ $2.50 per site (Lean profile).
 
 ## Step 0: Pull latest affiliate links (deterministic)
 
@@ -40,32 +40,48 @@ For each of the 3 selected topics:
    - secondary_keywords (from Step 2)
    - Uses Haiku 4.5, ≤ 3 web searches
    - Saves content/drafts/<slug>/en.md
+   - BEFORE returning, persist the researcher's brief at content/drafts/<slug>/research.json
+     (structure: `{primary_keyword, secondary_keywords, search_intent, estimated_difficulty, rationale, claims_seeded_in_draft: [...]}`)
 
-2. Run translation script (deterministic, no Claude call):
+2. Invoke `verifier` subagent with:
+   - Path to content/drafts/<slug>/en.md
+   - Path to content/drafts/<slug>/research.json (may not exist — tolerate)
+   - Path to write verification.json: content/drafts/<slug>/verification.json
+   - Uses Haiku 4.5, ≤ 3 WebFetch calls
+   - Emits verification.json with per-claim status
+
+3. Run verification finisher script (deterministic, updates frontmatter):
+   ```
+   npx tsx scripts/verify-draft.ts <slug>
+   ```
+   - Exit code 3 = `blocked` → skip remaining steps for this slug, report at end
+   - Exit code 0 = verified / partial / skipped → continue
+
+4. Run translation script (deterministic, no Claude call):
    ```
    npx tsx scripts/translate.ts <slug>
    ```
 
-3. Run glossary enforcement script (deterministic):
+5. Run glossary enforcement script (deterministic):
    ```
    npx tsx scripts/enforce-glossary.ts <slug>
    ```
 
-4. Invoke `packager` subagent for metadata.
+6. Invoke `packager` subagent for metadata.
    - Uses Haiku 4.5
    - Saves content/drafts/<slug>/meta.json
 
-5. Run affiliate link insertion (deterministic, skips if no links configured):
+7. Run affiliate link insertion (deterministic, skips if no links configured):
    ```
    npx tsx scripts/insert-affiliate.ts <slug>
    ```
 
-6. Run schema generation script (deterministic):
+8. Run schema generation script (deterministic):
    ```
    npx tsx scripts/generate-schema.ts <slug>
    ```
 
-7. Run image fetch script:
+9. Run image fetch script:
    ```
    npx tsx scripts/fetch-image.ts <slug>
    ```
@@ -87,7 +103,9 @@ Do NOT publish automatically. Human reviews drafts, then runs `/publish <slug>` 
 
 - One `seo-researcher` call per article. No retries.
 - One `writer` call per article. No retries.
+- One `verifier` call per article. No retries.
 - One `packager` call per article. No retries.
-- If any script fails, skip that article and continue with the next.
+- If `verify-draft.ts` exits 3 (blocked), skip packager/affiliate/schema/image for that slug and flag for human review.
+- If any other script fails, skip that article and continue with the next.
 - Report all failures at the end.
-- TOTAL subagent calls this entire run: 9 (3 seo-researcher + 3 writer + 3 packager). NO MORE.
+- TOTAL subagent calls this entire run: 12 (3 seo-researcher + 3 writer + 3 verifier + 3 packager). NO MORE.

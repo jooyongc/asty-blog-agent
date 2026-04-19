@@ -67,13 +67,27 @@ async function run() {
   const zhChars = zh.body.replace(/\s/g, '').length;
   if (zhChars < 800) throw new Error(`zh body <800 chars (got ${zhChars})`);
 
+  // Featured image defence: ensure every post leaves the draft with an image URL.
+  // fetch-image.ts should have populated this; if not, block publish so the site
+  // never receives a post that will render as a gray placeholder on the blog list.
+  if (!meta.featured_image || typeof meta.featured_image.url !== 'string' || !meta.featured_image.url.trim()) {
+    throw new Error(
+      `featured_image.url is missing in meta.json. Run: npx tsx scripts/fetch-image.ts ${SLUG}`
+    );
+  }
+
   const payload = {
     slug: meta.slug,
     category: meta.category,
     publish_at: meta.publish_at,            // ISO string, KST
     status: 'scheduled',
     canonical_lang: meta.canonical_lang ?? 'en',
-    featured_image: meta.featured_image,
+    // API expects flat fields, not a nested featured_image object.
+    // Previous versions sent `featured_image: {...}` which Zod silently stripped,
+    // resulting in NULL featured_image_url on published rows.
+    featured_image_url: meta.featured_image.url,
+    featured_image_alt: meta.featured_image.alt ?? undefined,
+    featured_image_credit: meta.featured_image.credit ?? undefined,
     translations: {
       en: {
         title: meta.translations.en.title,
