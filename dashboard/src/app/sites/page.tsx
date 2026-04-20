@@ -5,8 +5,8 @@ import { Icons } from '@/components/icons'
 
 export const dynamic = 'force-dynamic'
 
-export default function SitesListPage() {
-  const sites = listSites()
+export default async function SitesListPage() {
+  const sites = await listSites()
 
   return (
     <div>

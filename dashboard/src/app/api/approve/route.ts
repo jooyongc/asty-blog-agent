@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   if (!body || !body.action || !body.site_id || !body.slug) {
     return NextResponse.json({ error: 'site_id, slug, action required' }, { status: 400 })
   }
-  const site = getSite(body.site_id)
+  const site = await getSite(body.site_id)
   if (!site) return NextResponse.json({ error: 'Unknown site' }, { status: 404 })
 
   const ok =

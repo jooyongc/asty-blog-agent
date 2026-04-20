@@ -1,4 +1,4 @@
-import type { SiteConfig } from './sites'
+import { getSiteBearer, type SiteConfig } from './sites'
 
 export type QueueItem = {
   id: string
@@ -43,8 +43,7 @@ export type QueueExport = {
 }
 
 async function bearer(site: SiteConfig, pathname: string, init?: RequestInit): Promise<Response> {
-  const key = process.env[site.env.api_key]
-  if (!key) throw new Error(`env ${site.env.api_key} missing`)
+  const key = await getSiteBearer(site)
   const sep = pathname.includes('?') ? '&' : '?'
   return fetch(`${site.site_url}${pathname}${sep}_t=${Date.now()}`, {
     ...init,

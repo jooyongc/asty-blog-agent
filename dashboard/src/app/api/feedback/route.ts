@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSite } from '@/lib/sites'
+import { getSite, getSiteBearer } from '@/lib/sites'
 import { isAuthed } from '@/lib/auth'
 
 export const runtime = 'nodejs'
@@ -30,11 +30,15 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     )
   }
-  const site = getSite(body.site_id)
+  const site = await getSite(body.site_id)
   if (!site) return NextResponse.json({ error: 'Unknown site' }, { status: 404 })
 
-  const key = process.env[site.env.api_key]
-  if (!key) return NextResponse.json({ error: `${site.env.api_key} not set` }, { status: 500 })
+  let key: string
+  try {
+    key = await getSiteBearer(site)
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 500 })
+  }
 
   try {
     const res = await fetch(`${site.site_url}/api/admin/feedback`, {

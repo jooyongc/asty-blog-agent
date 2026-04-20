@@ -35,7 +35,7 @@ const PIPELINE_STAGES: Array<'writer' | 'verifier' | 'translate' | 'packager' | 
 ]
 
 export default async function QueuePage() {
-  const sites = listSites()
+  const sites = await listSites()
   const byCount: Record<string, number> = {}
   const queues: AggregatedQueue[] = []
   let totalAwaiting = 0

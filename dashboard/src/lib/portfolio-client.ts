@@ -1,4 +1,4 @@
-import type { SiteConfig } from './sites'
+import { getSiteBearer, type SiteConfig } from './sites'
 
 export type MatrixEntity = {
   canonical_name: string
@@ -22,8 +22,12 @@ export async function fetchPortfolioMatrix(
   site: SiteConfig,
   limit = 12,
 ): Promise<MatrixResponse | null> {
-  const key = process.env[site.env.api_key]
-  if (!key) return null
+  let key: string
+  try {
+    key = await getSiteBearer(site)
+  } catch {
+    return null
+  }
   try {
     const res = await fetch(`${site.site_url}/api/admin/graph/matrix?limit=${limit}`, {
       headers: { Authorization: `Bearer ${key}` },

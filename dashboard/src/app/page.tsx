@@ -21,7 +21,7 @@ type SiteSummary = {
 }
 
 async function collectSummaries(): Promise<SiteSummary[]> {
-  const sites = listSites()
+  const sites = await listSites()
   const summaries = await Promise.all(
     sites.map(async (s): Promise<SiteSummary> => {
       const [postsData, affData] = await Promise.all([
@@ -69,7 +69,7 @@ async function collectSummaries(): Promise<SiteSummary[]> {
 const DEEPL_MONTHLY_CAP = 500_000
 
 export default async function Overview() {
-  const sites = listSites()
+  const sites = await listSites()
   const [summaries, costs] = await Promise.all([
     collectSummaries(),
     Promise.all(sites.map((s) => fetchCostSummary(s, 30))),

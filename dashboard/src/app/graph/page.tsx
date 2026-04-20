@@ -1,4 +1,4 @@
-import { listSites } from '@/lib/sites'
+import { listSites, getSiteBearer } from '@/lib/sites'
 import type { SiteConfig } from '@/lib/sites'
 import { Card, CardHead, Chip, Metric } from '@/components/primitives'
 import { Icons } from '@/components/icons'
@@ -33,8 +33,12 @@ type GraphResponse = {
 }
 
 async function fetchSubgraph(site: SiteConfig, entity: string): Promise<GraphResponse | null> {
-  const key = process.env[site.env.api_key]
-  if (!key) return null
+  let key: string
+  try {
+    key = await getSiteBearer(site)
+  } catch {
+    return null
+  }
   try {
     const res = await fetch(
       `${site.site_url}/api/admin/graph/export?entity=${encodeURIComponent(entity)}&hops=2&_t=${Date.now()}`,
@@ -53,7 +57,7 @@ export default async function GraphPage({
   searchParams: Promise<{ entity?: string; site?: string }>
 }) {
   const sp = await searchParams
-  const sites = listSites()
+  const sites = await listSites()
   const site = sites.find((s) => s.site_id === sp.site) ?? sites[0] ?? null
   const entity = sp.entity ?? 'ASTY Cabin'
   const graph = site ? await fetchSubgraph(site, entity) : null

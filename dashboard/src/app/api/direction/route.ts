@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { isAuthed } from '@/lib/auth'
-import { getSite, type SiteConfig } from '@/lib/sites'
+import { getSite, getSiteBearer, type SiteConfig } from '@/lib/sites'
 import { DIRECTOR_SYSTEM_PROMPT } from '@/lib/director-prompt'
 
 export const runtime = 'nodejs'
@@ -39,8 +39,10 @@ async function gatherContext(site: SiteConfig): Promise<{
   gsc_striking: Array<{ query: string; avg_position: number; impressions: number }>
   recent_feedback: Array<{ rating: number; reason: string | null }>
 }> {
-  const key = process.env[site.env.api_key]
-  if (!key) {
+  let key: string
+  try {
+    key = await getSiteBearer(site)
+  } catch {
     return { recent_titles: [], gsc_striking: [], recent_feedback: [] }
   }
 
@@ -97,7 +99,7 @@ export async function POST(req: NextRequest) {
   if (!body?.site_id || !body.direction_text?.trim()) {
     return NextResponse.json({ error: 'site_id and direction_text required' }, { status: 400 })
   }
-  const site = getSite(body.site_id)
+  const site = await getSite(body.site_id)
   if (!site) return NextResponse.json({ error: 'Unknown site' }, { status: 404 })
 
   const anthropicKey = process.env.ANTHROPIC_API_KEY
@@ -152,7 +154,12 @@ export async function POST(req: NextRequest) {
     (msg.usage.input_tokens * 1) / 1_000_000 + (msg.usage.output_tokens * 5) / 1_000_000
 
   // Fire-and-forget cost logging to the site. Non-blocking.
-  const agentKey = process.env[site.env.api_key]
+  let agentKey: string | null = null
+  try {
+    agentKey = await getSiteBearer(site)
+  } catch {
+    agentKey = null
+  }
   if (agentKey) {
     fetch(`${site.site_url}/api/admin/costs/log`, {
       method: 'POST',

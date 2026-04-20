@@ -26,7 +26,7 @@ type SiteStat = {
 }
 
 export default async function PortfolioPage() {
-  const sites = listSites()
+  const sites = await listSites()
   const stats: SiteStat[] = []
 
   for (const s of sites) {

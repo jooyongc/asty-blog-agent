@@ -26,7 +26,7 @@ function fmtDate(s: string | null): string {
 
 export default async function SiteDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const site = getSite(id)
+  const site = await getSite(id)
   if (!site) notFound()
 
   const [postsData, affData] = await Promise.all([fetchPosts(site, 28), fetchAffiliate(site)])

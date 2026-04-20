@@ -1,4 +1,4 @@
-import type { SiteConfig } from './sites'
+import { getSiteBearer, type SiteConfig } from './sites'
 
 /**
  * Type-safe client that calls each site's bearer-authenticated export endpoints.
@@ -50,8 +50,7 @@ export type AffiliateExport = {
 }
 
 async function bearer(site: SiteConfig, pathname: string): Promise<Response> {
-  const key = process.env[site.env.api_key]
-  if (!key) throw new Error(`env ${site.env.api_key} missing`)
+  const key = await getSiteBearer(site)
   const url = `${site.site_url}${pathname}`
   // Cache-bust query since we observed Vercel edge caching the 401 state
   const sep = pathname.includes('?') ? '&' : '?'

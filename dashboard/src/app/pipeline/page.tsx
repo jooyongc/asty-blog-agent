@@ -30,8 +30,8 @@ const STAGES = [
   { id: 'linker',    agent: 'linker' as AgentId,    title: '내부 링크',       eta: '~5s' },
 ]
 
-export default function PipelinePage() {
-  const sites = listSites()
+export default async function PipelinePage() {
+  const sites = await listSites()
   const deepl = readDeeplUsage()
   const thisMonth = new Date().toISOString().slice(0, 7)
   const deeplActive = deepl && deepl.month === thisMonth

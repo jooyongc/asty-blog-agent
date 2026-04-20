@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSite } from '@/lib/sites'
+import { getSite, getSiteBearer } from '@/lib/sites'
 import { isAuthed } from '@/lib/auth'
 
 export const runtime = 'nodejs'
@@ -14,11 +14,15 @@ export async function GET(req: NextRequest) {
   }
   const { searchParams } = new URL(req.url)
   const siteId = searchParams.get('site_id') ?? 'asty-cabin'
-  const site = getSite(siteId)
+  const site = await getSite(siteId)
   if (!site) return NextResponse.json({ error: 'Unknown site' }, { status: 404 })
 
-  const key = process.env[site.env.api_key]
-  if (!key) return NextResponse.json({ error: `${site.env.api_key} not set` }, { status: 500 })
+  let key: string
+  try {
+    key = await getSiteBearer(site)
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 500 })
+  }
 
   const qs = new URLSearchParams({
     site_id: siteId,

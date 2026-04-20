@@ -1,9 +1,16 @@
 import fs from 'fs'
 import path from 'path'
+import { decrypt } from './crypto'
+import { listWorkspaces, type Workspace } from './workspaces-client'
 
 /**
- * Reads sites/<id>/config.json files from the parent asty-blog-agent-lean repo.
- * The dashboard runs as a child of that repo (at dashboard/), so sites/ is at ../sites.
+ * Site config used across the dashboard. Either comes from:
+ *  1. The `dashboard_workspaces` table (preferred, via workspaces-client),
+ *  2. Sibling `sites/<id>/config.json` files (legacy local-dev),
+ *  3. `FALLBACK_SITES` (bootstrap — asty-cabin only).
+ *
+ * `encryptedApiKey` is set for workspaces coming from (1). For the bootstrap
+ * site, the bearer is read directly from env via `env.api_key`.
  */
 
 export type SiteConfig = {
@@ -28,16 +35,17 @@ export type SiteConfig = {
   budget?: {
     deepl_chars_per_run?: number
     deepl_chars_monthly?: number
+    profile?: 'lean' | 'standard' | 'full'
   }
+  encryptedApiKey?: string
+  active?: boolean
 }
 
-// ../sites from the dashboard root; when running, cwd is dashboard/ or the deploy root.
-// We probe common locations.
 function resolveSitesDir(): string | null {
   const candidates = [
-    path.resolve(process.cwd(), '..', 'sites'),           // local dev: dashboard/ sibling of sites/
-    path.resolve(process.cwd(), 'sites'),                 // vercel: monorepo-ish
-    path.resolve(process.cwd(), '..', '..', 'sites'),     // defensive
+    path.resolve(process.cwd(), '..', 'sites'),
+    path.resolve(process.cwd(), 'sites'),
+    path.resolve(process.cwd(), '..', '..', 'sites'),
   ]
   for (const p of candidates) {
     if (fs.existsSync(p) && fs.statSync(p).isDirectory()) return p
@@ -45,9 +53,7 @@ function resolveSitesDir(): string | null {
   return null
 }
 
-// Fallback configs bundled into the dashboard build. Used when the sibling
-// `sites/` directory is not present in the deployment (e.g. on Vercel where
-// only dashboard/ is deployed). Mirrors sites/asty-cabin/config.json.
+// Bootstrap config: asty-cabin always available even if control plane is down.
 const FALLBACK_SITES: SiteConfig[] = [
   {
     site_id: 'asty-cabin',
@@ -71,15 +77,37 @@ const FALLBACK_SITES: SiteConfig[] = [
       published: 'content/published',
       affiliate_file: 'affiliate/links.json',
     },
-    budget: { deepl_chars_per_run: 40000, deepl_chars_monthly: 450000 },
+    budget: { deepl_chars_per_run: 40000, deepl_chars_monthly: 450000, profile: 'lean' },
+    active: true,
   },
 ]
 
-export function listSites(): SiteConfig[] {
+function workspaceToSiteConfig(w: Workspace): SiteConfig {
+  return {
+    site_id: w.site_id,
+    site_url: w.site_url,
+    env: { api_key: w.site_id === 'asty-cabin' ? 'ASTY_AGENT_API_KEY' : '' },
+    languages: w.languages,
+    canonical_lang: w.canonical_lang,
+    categories: w.categories,
+    paths: {
+      glossary_dir: 'glossary',
+      topic_queue: 'topics/manual-queue.md',
+      voice_guide: `sites/${w.site_id}/VOICE.md`,
+      drafts: 'content/drafts',
+      published: 'content/published',
+    },
+    budget: { profile: w.profile },
+    encryptedApiKey: w.encrypted_api_key ?? undefined,
+    active: w.active,
+  }
+}
+
+function readFilesystemSites(): SiteConfig[] {
   const dir = resolveSitesDir()
-  if (!dir) return FALLBACK_SITES
+  if (!dir) return []
   try {
-    const entries = fs.readdirSync(dir, { withFileTypes: true }).filter(d => d.isDirectory())
+    const entries = fs.readdirSync(dir, { withFileTypes: true }).filter((d) => d.isDirectory())
     const result: SiteConfig[] = []
     for (const e of entries) {
       const cfgPath = path.join(dir, e.name, 'config.json')
@@ -91,15 +119,65 @@ export function listSites(): SiteConfig[] {
         // skip invalid configs
       }
     }
-    if (result.length === 0) return FALLBACK_SITES
-    return result.sort((a, b) => a.site_id.localeCompare(b.site_id))
+    return result
   } catch {
-    return FALLBACK_SITES
+    return []
   }
 }
 
-export function getSite(id: string): SiteConfig | null {
-  return listSites().find(s => s.site_id === id) ?? null
+/**
+ * Server-side site list. Priority:
+ *   1. Control plane (dashboard_workspaces table) — remote HTTP call
+ *   2. Local filesystem `sites/<id>/config.json` — legacy dev environment
+ *   3. FALLBACK_SITES — bootstrap (asty-cabin only)
+ */
+export async function listSites(
+  options?: { includeInactive?: boolean },
+): Promise<SiteConfig[]> {
+  const includeInactive = options?.includeInactive ?? false
+
+  const workspaces = await listWorkspaces()
+  if (workspaces.length > 0) {
+    const filtered = includeInactive ? workspaces : workspaces.filter((w) => w.active)
+    return filtered
+      .map(workspaceToSiteConfig)
+      .sort((a, b) => a.site_id.localeCompare(b.site_id))
+  }
+
+  const fsConfigs = readFilesystemSites()
+  if (fsConfigs.length > 0) return fsConfigs.sort((a, b) => a.site_id.localeCompare(b.site_id))
+
+  return FALLBACK_SITES
+}
+
+export async function getSite(id: string): Promise<SiteConfig | null> {
+  const all = await listSites({ includeInactive: true })
+  return all.find((s) => s.site_id === id) ?? null
+}
+
+/**
+ * Resolves the Bearer token for any workspace.
+ *  - Bootstrap site (`asty-cabin` or any config where env.api_key=ASTY_AGENT_API_KEY):
+ *    read directly from process.env.
+ *  - All other workspaces: decrypt their AES-256-GCM ciphertext (AAD=site_id).
+ *
+ * Throws on any failure — callers should convert to HTTP errors with
+ * narrow, non-sensitive messages.
+ */
+export async function getSiteBearer(site: SiteConfig): Promise<string> {
+  if (site.site_id === 'asty-cabin' || site.env.api_key === 'ASTY_AGENT_API_KEY') {
+    const key = process.env.ASTY_AGENT_API_KEY
+    if (!key) throw new Error('ASTY_AGENT_API_KEY not set on dashboard')
+    return key
+  }
+  if (!site.encryptedApiKey) {
+    throw new Error(`workspace ${site.site_id} has no encrypted_api_key — cannot authenticate`)
+  }
+  try {
+    return decrypt(site.encryptedApiKey, site.site_id)
+  } catch (e) {
+    throw new Error(`decrypt failed for ${site.site_id}: ${(e as Error).message}`)
+  }
 }
 
 /**
@@ -131,8 +209,8 @@ export function listReports(): Array<{ name: string; path: string; mtime: number
   for (const dir of candidates) {
     if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
       return fs.readdirSync(dir)
-        .filter(f => f.endsWith('.md'))
-        .map(f => {
+        .filter((f) => f.endsWith('.md'))
+        .map((f) => {
           const full = path.join(dir, f)
           return { name: f, path: full, mtime: fs.statSync(full).mtimeMs }
         })

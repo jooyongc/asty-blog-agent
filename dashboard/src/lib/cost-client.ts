@@ -1,4 +1,4 @@
-import type { SiteConfig } from './sites'
+import { getSiteBearer, type SiteConfig } from './sites'
 
 export type AgentBreakdown = {
   agent: string
@@ -26,8 +26,12 @@ export async function fetchCostSummary(
   site: SiteConfig,
   days = 30,
 ): Promise<CostSummary | null> {
-  const key = process.env[site.env.api_key]
-  if (!key) return null
+  let key: string
+  try {
+    key = await getSiteBearer(site)
+  } catch {
+    return null
+  }
   try {
     const res = await fetch(
       `${site.site_url}/api/admin/costs/summary?site_id=${encodeURIComponent(site.site_id)}&days=${days}`,
