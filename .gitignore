@@ -6,3 +6,6 @@ node_modules/
 dist/
 .vercel
 reports/
+
+# Deployment secrets (includes DASHBOARD_MASTER_KEY)
+docs/multi-blog-monetization/workspaces/DEPLOYMENT-SECRETS.md

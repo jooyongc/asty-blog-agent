@@ -149,6 +149,7 @@ export function WorkspaceTable({ workspaces, activeId }: Props) {
         <WorkspaceForm
           mode={dialog.kind}
           initial={dialog.kind === 'edit' ? dialog.workspace : null}
+          allWorkspaces={workspaces.filter((w) => w.active)}
           onClose={() => setDialog({ kind: 'none' })}
           onSaved={() => {
             setDialog({ kind: 'none' })

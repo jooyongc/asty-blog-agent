@@ -1,18 +1,30 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/primitives'
+import { Button, Chip } from '@/components/primitives'
 import { Icons } from '@/components/icons'
 import type { Workspace } from '@/lib/workspaces-client'
 
 type Props = {
   mode: 'create' | 'edit'
   initial: Workspace | null
+  allWorkspaces?: Workspace[]
   onClose: () => void
   onSaved: () => void
 }
 
-export function WorkspaceForm({ mode, initial, onClose, onSaved }: Props) {
+type Suggestion = {
+  site_id: string
+  name: string
+  site_url_suggestion: string
+  languages: string[]
+  canonical_lang: string
+  categories: string[]
+  profile: 'lean' | 'standard' | 'full'
+  rationale: string
+}
+
+export function WorkspaceForm({ mode, initial, allWorkspaces = [], onClose, onSaved }: Props) {
   const [siteId, setSiteId] = useState(initial?.site_id ?? '')
   const [name, setName] = useState(initial?.name ?? '')
   const [siteUrl, setSiteUrl] = useState(initial?.site_url ?? 'https://')
@@ -26,6 +38,61 @@ export function WorkspaceForm({ mode, initial, onClose, onSaved }: Props) {
   const [active, setActive] = useState(initial?.active ?? true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // AI assistant state
+  const [assistantOpen, setAssistantOpen] = useState(mode === 'create')
+  const [description, setDescription] = useState('')
+  const [aiBusy, setAiBusy] = useState(false)
+  const [lastSuggestion, setLastSuggestion] = useState<Suggestion | null>(null)
+  const [lastCost, setLastCost] = useState<number | null>(null)
+
+  function applySuggestion(s: Suggestion) {
+    if (mode === 'create' && !siteId) setSiteId(s.site_id)
+    if (!name) setName(s.name)
+    if (!siteUrl || siteUrl === 'https://') setSiteUrl(s.site_url_suggestion || 'https://')
+    setLanguagesStr(s.languages.join(', '))
+    setCanonicalLang(s.canonical_lang)
+    setCategoriesStr(s.categories.join(', '))
+    setProfile(s.profile)
+    setLastSuggestion(s)
+  }
+
+  async function askAssistant() {
+    const desc = description.trim()
+    if (desc.length < 5) { setError('설명을 5자 이상 입력하세요.'); return }
+    setAiBusy(true); setError(null)
+    try {
+      const res = await fetch('/api/workspaces/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          description: desc,
+          clone_from: mode === 'edit' ? {
+            languages: initial?.languages,
+            canonical_lang: initial?.canonical_lang,
+            categories: initial?.categories,
+            profile: initial?.profile,
+          } : undefined,
+        }),
+      })
+      const text = await res.text()
+      if (!res.ok) { setError(`HTTP ${res.status}: ${text.slice(0, 200)}`); return }
+      const j = JSON.parse(text) as { suggestion: Suggestion; meta: { cost_usd: number } }
+      setLastCost(j.meta.cost_usd)
+      applySuggestion(j.suggestion)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setAiBusy(false)
+    }
+  }
+
+  function cloneFrom(w: Workspace) {
+    setLanguagesStr(w.languages.join(', '))
+    setCanonicalLang(w.canonical_lang)
+    setCategoriesStr(w.categories.join(', '))
+    setProfile(w.profile)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -91,6 +158,109 @@ export function WorkspaceForm({ mode, initial, onClose, onSaved }: Props) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-3">
+          {/* AI assistant + clone — only shown in create mode */}
+          {mode === 'create' && (
+            <>
+              <div
+                className="rounded-lg border"
+                style={{
+                  borderColor: 'var(--color-line-2)',
+                  background: 'var(--color-bg-subtle)',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setAssistantOpen((v) => !v)}
+                  className="w-full flex items-center gap-2 px-3.5 py-2.5 text-left"
+                >
+                  <Icons.Sparkle size={14} />
+                  <span className="text-[12.5px] font-semibold">AI 어시스턴트</span>
+                  <Chip kind="ok">권장</Chip>
+                  <span className="text-[11px] text-[color:var(--color-text-3)] ml-1">
+                    한 문장 설명 → Haiku가 나머지 자동 입력 (~$0.001)
+                  </span>
+                  <div className="flex-1" />
+                  <span className="text-[10.5px] text-[color:var(--color-text-4)]">
+                    {assistantOpen ? '접기' : '펼치기'}
+                  </span>
+                </button>
+                {assistantOpen && (
+                  <div className="px-3.5 pb-3.5 flex flex-col gap-2">
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value.slice(0, 400))}
+                      placeholder="예: 미국/일본 독자 대상 K-pop 팬 컬처 블로그. 월 예산 타이트. 아이돌, 스케줄, 한국어 입문을 중심으로."
+                      className="w-full border rounded px-2.5 py-1.5 text-[12.5px] resize-y min-h-[70px]"
+                      style={{ borderColor: 'var(--color-line-2)' }}
+                    />
+                    <div className="flex gap-1.5 items-center">
+                      <Button
+                        type="button"
+                        variant="accent"
+                        size="sm"
+                        onClick={askAssistant}
+                        disabled={aiBusy}
+                      >
+                        <Icons.Sparkle size={11} /> {aiBusy ? '생성 중…' : '제안 받기'}
+                      </Button>
+                      {lastCost != null && (
+                        <span className="text-[10.5px] text-[color:var(--color-text-4)] tabular-nums">
+                          마지막 호출 ${lastCost.toFixed(6)}
+                        </span>
+                      )}
+                      <div className="flex-1" />
+                      <span className="text-[10.5px] text-[color:var(--color-text-4)]">
+                        {description.length}/400
+                      </span>
+                    </div>
+                    {lastSuggestion && (
+                      <div
+                        className="text-[11px] px-2.5 py-1.5 rounded"
+                        style={{
+                          background: 'var(--color-ok-soft)',
+                          color: 'var(--color-text-2)',
+                        }}
+                      >
+                        <span className="font-semibold text-[color:var(--color-accent-ink)]">
+                          ✓ 적용됨 —{' '}
+                        </span>
+                        {lastSuggestion.rationale}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {allWorkspaces.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-[color:var(--color-text-3)]">
+                    또는 기존 사이트 설정 복제:
+                  </span>
+                  <select
+                    onChange={(e) => {
+                      const w = allWorkspaces.find((x) => x.id === e.target.value)
+                      if (w) cloneFrom(w)
+                      e.currentTarget.value = ''
+                    }}
+                    defaultValue=""
+                    className="text-[12px] border rounded px-2 py-0.5"
+                    style={{ borderColor: 'var(--color-line-2)' }}
+                  >
+                    <option value="" disabled>— 사이트 선택 —</option>
+                    {allWorkspaces.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.name} ({w.site_id}) · {w.profile}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-[10.5px] text-[color:var(--color-text-4)]">
+                    언어·카테고리·프로파일만 복사됨 (URL/키는 그대로 두고 덮어쓰지 않음)
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+
           <Field label="site_id" hint="소문자 케밥케이스 (a-z, 0-9, -). 변경 불가.">
             <input
               type="text"
