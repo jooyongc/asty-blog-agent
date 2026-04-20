@@ -7,6 +7,7 @@
 import { spawnSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import matter from 'gray-matter'
 
 const SLUG = process.argv[2]
 if (!SLUG) { console.error('slug required'); process.exit(1) }
@@ -18,19 +19,77 @@ function run(cmd: string, args: string[]): void {
   if (r.status !== 0) throw new Error(`${cmd} ${args.join(' ')} exit ${r.status}`)
 }
 
+function extractFieldFromRaw(fmBlock: string, key: string): string | null {
+  const lines = fmBlock.split('\n')
+  for (const line of lines) {
+    const m = line.match(new RegExp(`^${key}:\\s*(.*)$`))
+    if (!m) continue
+    let v = m[1].trim()
+    if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+      v = v.slice(1, -1).replace(/\\"/g, '"')
+    }
+    return v
+  }
+  return null
+}
+
 function defensiveFixFrontmatter(): void {
   const p = path.join(DRAFT_DIR, 'en.md')
   let s = fs.readFileSync(p, 'utf8')
-  // Strip code fences anywhere
+  // 1. Strip code fences anywhere
   s = s.replace(/^```(?:yaml|markdown|md)?\s*\n/gm, '').replace(/^```\s*$/gm, '')
-  // Collapse double frontmatter markers
+  // 2. Collapse double frontmatter markers
   s = s.replace(/^---\s*\n\s*\n?---\s*\n/, '---\n')
-  // Remove escape-mangled quotes like \"
+  // 3. Strip mangled escape quotes
   s = s.replace(/\\"/g, '"')
   s = s.trimStart()
-  // Quote any title: line that has an unquoted colon
-  s = s.replace(/^(title:\s*)(?!["'])([^\n]*:[^\n]*)$/m, (_, p1, p2) => `${p1}"${p2.replace(/"/g, '\\"')}"`)
-  fs.writeFileSync(p, s)
+
+  // 4. Try parsing as-is
+  let parsed: ReturnType<typeof matter> | null = null
+  try { parsed = matter(s) } catch { parsed = null }
+
+  const hasTitle = parsed && typeof parsed.data.title === 'string' && parsed.data.title.length > 0
+  const hasMeta = parsed && typeof parsed.data.meta_description === 'string' && parsed.data.meta_description.length > 0
+
+  if (parsed && hasTitle && hasMeta) {
+    // Valid — normalize via matter.stringify to guarantee safe YAML for translate.ts
+    const rebuilt = matter.stringify(parsed.content, parsed.data)
+    fs.writeFileSync(p, rebuilt)
+    return
+  }
+
+  // 5. Parse failed — manually extract critical fields & rewrite safely
+  const fmMatch = s.match(/^---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)$/)
+  if (!fmMatch) throw new Error(`[chain] en.md has no parseable frontmatter`)
+  const fmBlock = fmMatch[1]
+  const body = fmMatch[2]
+
+  const title = extractFieldFromRaw(fmBlock, 'title') ?? SLUG.replace(/-/g, ' ')
+  const metaDesc = extractFieldFromRaw(fmBlock, 'meta_description') ?? title
+  const slugField = extractFieldFromRaw(fmBlock, 'slug') ?? SLUG
+  const lang = extractFieldFromRaw(fmBlock, 'lang') ?? 'en'
+  const category = extractFieldFromRaw(fmBlock, 'category') ?? 'culture'
+  const author = extractFieldFromRaw(fmBlock, 'author') ?? 'ASTY Cabin Editorial'
+
+  let tags: string[] = []
+  const tagsInline = fmBlock.match(/^tags:\s*\[([^\]]*)\]/m)
+  if (tagsInline) {
+    tags = tagsInline[1].split(',').map((t) => t.trim().replace(/^["']|["']$/g, '')).filter(Boolean)
+  }
+
+  const safeData: Record<string, unknown> = {
+    slug: slugField,
+    lang,
+    title,
+    meta_description: metaDesc,
+    category,
+    tags: tags.length > 0 ? tags : ['seoul', 'long-stay'],
+    author,
+    draft: true,
+  }
+  const rebuilt = matter.stringify(body.trim(), safeData)
+  fs.writeFileSync(p, rebuilt)
+  console.log(`[chain] frontmatter rewritten (title: "${title.slice(0, 60)}")`)
 }
 
 console.log(`=== chain pipeline for ${SLUG} ===`)

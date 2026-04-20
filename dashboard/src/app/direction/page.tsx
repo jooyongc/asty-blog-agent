@@ -1,8 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Card, CardHead, Chip, Button, AgentAvatar } from '@/components/primitives'
 import { Icons } from '@/components/icons'
+import {
+  CATEGORY_LABEL,
+  orderedTemplates,
+  type DirectionCategory,
+  type DirectionTemplate,
+} from '@/lib/direction-templates'
 
 type Proposal = {
   rank: number
@@ -37,14 +43,41 @@ type VoteState = Record<number, VoteKind>
 
 const SITE_ID = 'asty-cabin'
 
+const CATEGORY_OPTIONS: Array<DirectionCategory | 'all'> = [
+  'all',
+  'seasonal',
+  'food',
+  'transport',
+  'practical',
+  'festival',
+  'medical',
+  'family',
+  'corporate',
+]
+
 export default function DirectionPage() {
   const [input, setInput] = useState(
-    'This week focus on quiet winter stays. Two-night itinerary aimed at first-time JA and ZH guests so they feel confident booking.',
+    'ASTY Cabin에 장기 체류 중인 외국인 게스트를 대상으로, 이번 주는 동네에서 반복해서 갈 수 있는 식당 루틴을 중심으로 가자. 가격대별, 한식·아시안·서양식 믹스, 배달 가능 여부까지 정리.',
   )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [response, setResponse] = useState<DirectorResponse | null>(null)
   const [votes, setVotes] = useState<VoteState>({})
+  const [activeCat, setActiveCat] = useState<DirectionCategory | 'all'>('all')
+  const [templatesOpen, setTemplatesOpen] = useState(true)
+  const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null)
+
+  const templates = useMemo(() => orderedTemplates(), [])
+  const filteredTemplates = useMemo(
+    () => (activeCat === 'all' ? templates : templates.filter((t) => t.category === activeCat)),
+    [templates, activeCat],
+  )
+  const currentMonth = new Date().getMonth() + 1
+
+  function applyTemplate(t: DirectionTemplate) {
+    setInput(t.text.slice(0, 500))
+    setActiveTemplateId(t.id)
+  }
 
   async function generate() {
     setLoading(true)
@@ -154,6 +187,89 @@ export default function DirectionPage() {
           이번 주 방향을 한 문장으로 작성하면, Director(Haiku)가 GSC·피드백 맥락에 맞춰 3개 주제를 제안합니다.
         </p>
       </header>
+
+      <Card className="mb-3.5">
+        <CardHead>
+          <Icons.Sparkle size={14} />
+          <div className="text-[13.5px] font-semibold">방향 어시스턴트</div>
+          <Chip kind="ghost">{templates.length}개 템플릿</Chip>
+          <div className="flex-1" />
+          <Button size="sm" onClick={() => setTemplatesOpen((v) => !v)}>
+            {templatesOpen ? '접기' : '펼치기'}
+          </Button>
+        </CardHead>
+        {templatesOpen && (
+          <div className="p-3.5">
+            <div className="flex gap-1.5 flex-wrap mb-3">
+              {CATEGORY_OPTIONS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setActiveCat(c)}
+                  className={`text-[11.5px] px-2.5 py-1 rounded-full border transition`}
+                  style={{
+                    background:
+                      activeCat === c ? 'var(--color-accent)' : 'var(--color-bg-elev)',
+                    color:
+                      activeCat === c ? '#fff' : 'var(--color-text-2)',
+                    borderColor:
+                      activeCat === c ? 'transparent' : 'var(--color-line-2)',
+                  }}
+                >
+                  {c === 'all' ? '전체' : CATEGORY_LABEL[c]}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+              {filteredTemplates.map((t) => {
+                const isActive = activeTemplateId === t.id
+                const isSeasonal = t.seasonal_months?.includes(currentMonth)
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => applyTemplate(t)}
+                    className="text-left p-3 rounded-lg border transition hover:bg-[color:var(--color-bg-subtle)]"
+                    style={{
+                      borderColor: isActive
+                        ? 'var(--color-accent)'
+                        : 'var(--color-line-2)',
+                      background: isActive
+                        ? 'var(--color-ok-soft)'
+                        : 'transparent',
+                    }}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-[16px] leading-none">{t.emoji}</span>
+                      <span className="text-[12.5px] font-semibold truncate">
+                        {t.title}
+                      </span>
+                      {isSeasonal && (
+                        <Chip kind="ok" dot>
+                          제철
+                        </Chip>
+                      )}
+                      {isActive && <Chip kind="ok">선택됨</Chip>}
+                      <div className="flex-1" />
+                      <Chip kind="ghost">{CATEGORY_LABEL[t.category]}</Chip>
+                    </div>
+                    <div className="text-[11px] text-[color:var(--color-text-3)] leading-snug">
+                      {t.hint}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+            <div
+              className="mt-3 px-3 py-2 rounded-md text-[11.5px]"
+              style={{
+                background: 'var(--color-bg-subtle)',
+                color: 'var(--color-text-3)',
+              }}
+            >
+              ⓘ 템플릿을 클릭하면 아래 입력칸에 한글 방향이 채워집니다. 그대로 쓰거나 원하는 부분만 수정 후 <b>주제 제안 생성</b> 누르면 Director가 3개 주제를 뽑습니다.
+            </div>
+          </div>
+        )}
+      </Card>
 
       <Card className="mb-3.5">
         <CardHead>
