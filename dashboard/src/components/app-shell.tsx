@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { Icons, type IconName } from './icons'
+import { WorkspaceSwitcher } from './workspace-switcher'
+import type { Workspace } from '@/lib/workspaces-client'
 
 /* ---- Navigation model (mirrors design-source/components/Shell.jsx) ---- */
 
@@ -46,6 +48,7 @@ const NAV: NavGroup[] = [
   {
     group: '시스템',
     items: [
+      { href: '/workspaces', label: '워크스페이스', icon: 'Layers', badge: 'new' },
       { href: '/reports', label: '리포트', icon: 'Clock' },
     ],
   },
@@ -60,6 +63,7 @@ export const ROUTE_TITLES: Record<string, string> = {
   '/graph': '그래프 탐색',
   '/gsc': 'Search Console',
   '/portfolio': '포트폴리오',
+  '/workspaces': '워크스페이스',
   '/reports': '리포트',
 }
 
@@ -122,10 +126,14 @@ function Sidebar({
   pathname,
   open,
   onClose,
+  workspaces,
+  activeWorkspaceId,
 }: {
   pathname: string
   open: boolean
   onClose: () => void
+  workspaces: Workspace[]
+  activeWorkspaceId: string | null
 }) {
   const isActive = (href: string): boolean => {
     if (href === '/') return pathname === '/'
@@ -161,6 +169,14 @@ function Sidebar({
               Lean · Haiku 4.5
             </div>
           </div>
+        </div>
+
+        {/* Workspace switcher */}
+        <div className="px-1">
+          <div className="text-[11px] text-[color:var(--color-text-3)] uppercase tracking-wider px-1.5 pb-1 font-medium">
+            워크스페이스
+          </div>
+          <WorkspaceSwitcher workspaces={workspaces} activeId={activeWorkspaceId} />
         </div>
 
         {NAV.map((g) => (
@@ -236,13 +252,27 @@ function Topbar({
 
 /* ---- public shell component (client) ---- */
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  workspaces,
+  activeWorkspaceId,
+}: {
+  children: React.ReactNode
+  workspaces: Workspace[]
+  activeWorkspaceId: string | null
+}) {
   const pathname = usePathname() || '/'
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
     <div className="min-h-screen grid md:grid-cols-[248px_1fr] grid-cols-1">
-      <Sidebar pathname={pathname} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        pathname={pathname}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        workspaces={workspaces}
+        activeWorkspaceId={activeWorkspaceId}
+      />
       <div className="min-w-0 flex flex-col">
         <Topbar pathname={pathname} onOpenSidebar={() => setSidebarOpen(true)} />
         <main className="flex-1 px-6 md:px-8 py-7 pb-20 max-w-[1440px] w-full">{children}</main>

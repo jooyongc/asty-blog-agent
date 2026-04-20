@@ -3,6 +3,8 @@ import { cookies } from 'next/headers'
 import { Inter, JetBrains_Mono, Instrument_Serif, Noto_Sans_JP, Noto_Sans_SC } from 'next/font/google'
 import './globals.css'
 import { AppShell } from '@/components/app-shell'
+import { listWorkspaces } from '@/lib/workspaces-client'
+import { getActiveSiteId } from '@/lib/active-workspace'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -51,11 +53,18 @@ async function isAuthed(): Promise<boolean> {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const authed = await isAuthed()
   const fontVars = `${inter.variable} ${jetBrainsMono.variable} ${instrumentSerif.variable} ${notoJP.variable} ${notoSC.variable}`
+  // Only fetch workspace metadata for authenticated sessions; the login page
+  // has no sidebar so these are wasted bytes there.
+  const [workspaces, activeId] = authed
+    ? await Promise.all([listWorkspaces(), getActiveSiteId()])
+    : [[], null]
   return (
     <html lang="ko" className={`h-full ${fontVars}`}>
       <body className="min-h-full flex flex-col">
         {authed ? (
-          <AppShell>{children}</AppShell>
+          <AppShell workspaces={workspaces} activeWorkspaceId={activeId}>
+            {children}
+          </AppShell>
         ) : (
           <main className="flex-1">{children}</main>
         )}
