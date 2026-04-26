@@ -76,25 +76,13 @@ type UnsplashSearch = {
   results: UnsplashPhoto[];
 };
 
-async function run() {
-  const meta: Meta = JSON.parse(fs.readFileSync(META_PATH, 'utf8'));
-  const query =
-    meta.featured_image?.query ??
-    meta.translations?.en?.title?.replace(/[^a-zA-Z0-9\s]/g, '').slice(0, 60);
-
-  if (!query) {
-    throw new Error('No image query — set meta.featured_image.query');
-  }
-
-  console.log(`→ Unsplash search: "${query}"`);
-
+async function searchUnsplash(query: string): Promise<UnsplashPhoto[] | null> {
   const params = new URLSearchParams({
     query,
     per_page: '10',
     orientation: 'landscape',
     content_filter: 'high',
   });
-
   const res = await fetch(`https://api.unsplash.com/search/photos?${params}`, {
     headers: { Authorization: `Client-ID ${KEY}` },
   });
@@ -102,12 +90,50 @@ async function run() {
     throw new Error(`Unsplash ${res.status}: ${await res.text()}`);
   }
   const json: UnsplashSearch = await res.json();
-  if (!json.results.length) {
-    throw new Error(`No results for "${query}"`);
+  return json.results.length > 0 ? json.results : null;
+}
+
+function buildFallbackQueries(primary: string): string[] {
+  const words = primary.split(/\s+/).filter(Boolean);
+  const fallbacks: string[] = [];
+  // 2-word prefix
+  if (words.length > 2) fallbacks.push(words.slice(0, 2).join(' '));
+  // first word only
+  if (words.length > 1) fallbacks.push(words[0]);
+  // always try "Seoul" as last resort
+  if (!primary.toLowerCase().includes('seoul')) fallbacks.push('Seoul');
+  else fallbacks.push('Seoul city');
+  return [...new Set(fallbacks)];
+}
+
+async function run() {
+  const meta: Meta = JSON.parse(fs.readFileSync(META_PATH, 'utf8'));
+  const primaryQuery =
+    meta.featured_image?.query ??
+    meta.translations?.en?.title?.replace(/[^a-zA-Z0-9\s]/g, '').slice(0, 60);
+
+  if (!primaryQuery) {
+    throw new Error('No image query — set meta.featured_image.query');
+  }
+
+  const queriesToTry = [primaryQuery, ...buildFallbackQueries(primaryQuery)];
+  let photos: UnsplashPhoto[] | null = null;
+  let usedQuery = primaryQuery;
+
+  for (const q of queriesToTry) {
+    console.log(`→ Unsplash search: "${q}"`);
+    photos = await searchUnsplash(q);
+    if (photos) { usedQuery = q; break; }
+    console.log(`  no results for "${q}", trying fallback…`);
+  }
+
+  if (!photos) {
+    console.warn(`  ⚠ No Unsplash results for any query — skipping image (pipeline continues)`);
+    process.exit(0);
   }
 
   // Scoring: prefer landscape (>1.3 aspect), high likes, descriptive alt text
-  const scored = json.results.map((p) => {
+  const scored = photos.map((p) => {
     const aspect = p.width / p.height;
     const landscapeBonus = aspect > 1.3 ? 50 : 0;
     const likesScore = Math.log(p.likes + 1) * 10;
@@ -126,9 +152,9 @@ async function run() {
   // Build the featured_image block
   meta.featured_image = {
     strategy: 'unsplash',
-    query,
+    query: usedQuery,
     url: chosen.urls.regular,     // ~1080px wide
-    alt: chosen.alt_description || chosen.description || query,
+    alt: chosen.alt_description || chosen.description || usedQuery,
     credit: {
       source: 'Unsplash',
       author: chosen.user.name,
