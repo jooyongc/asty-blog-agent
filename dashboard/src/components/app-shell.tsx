@@ -163,7 +163,7 @@ function Sidebar({
           </div>
           <div className="min-w-0">
             <div className="font-semibold text-[13.5px] tracking-tight whitespace-nowrap">
-              ASTY Blog Agent
+              Contents Auto Agent
             </div>
             <div className="text-[11px] text-[color:var(--color-text-3)] tabular-nums mt-px">
               Lean · Haiku 4.5
