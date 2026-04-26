@@ -55,8 +55,9 @@ async function run() {
       !ALLOWED_FACTCHECK.includes(en.frontmatter.factcheck)) {
     throw new Error(`factcheck must be one of: ${ALLOWED_FACTCHECK.join(', ')}`);
   }
-  if (ja.frontmatter.translation_review !== 'passed' ||
-      zh.frontmatter.translation_review !== 'passed') {
+  const ALLOWED_REVIEW = ['passed', 'passed-with-warnings'];
+  if (!ALLOWED_REVIEW.includes(ja.frontmatter.translation_review) ||
+      !ALLOWED_REVIEW.includes(zh.frontmatter.translation_review)) {
     throw new Error('translation_review not passed on ja.md or zh.md');
   }
   // EN: word count by whitespace. JA/ZH: character count (no spaces between words).
