@@ -92,8 +92,24 @@ function defensiveFixFrontmatter(): void {
   console.log(`[chain] frontmatter rewritten (title: "${title.slice(0, 60)}")`)
 }
 
+function stripBoldMarkers(): void {
+  // AI writers often produce **bold** despite prompt rules. Strip them from the body
+  // (not frontmatter) so published articles don't carry the AI-content tell.
+  const p = path.join(DRAFT_DIR, 'en.md')
+  const s = fs.readFileSync(p, 'utf8')
+  const m = s.match(/^(---\s*\n[\s\S]*?\n---\s*\n)([\s\S]*)$/)
+  if (!m) return
+  const fm = m[1]
+  const body = m[2].replace(/\*\*([^*]+)\*\*/g, '$1')
+  if (body !== m[2]) {
+    fs.writeFileSync(p, fm + body)
+    console.log('[chain] stripped **bold** markers from body')
+  }
+}
+
 console.log(`=== chain pipeline for ${SLUG} ===`)
 defensiveFixFrontmatter()
+stripBoldMarkers()
 
 console.log('1/7 translate')
 run('npx', ['tsx', 'scripts/translate.ts', SLUG])

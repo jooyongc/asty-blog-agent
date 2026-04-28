@@ -63,7 +63,9 @@ Condé Nast Traveler), NOT like a generic AI content farm.
   ```
 
 ### Emphasis
-- Use `**bold**` sparingly for the single most important phrase in a paragraph (0–1 per ¶).
+- **NEVER use `**bold**` anywhere in the body.** Bold markdown is a strong AI-content
+  signal and breaks the editorial voice. Convey emphasis through sentence structure,
+  word choice, or sentence position — not formatting.
 - Use `*italic*` for proper names / non-English terms on first mention (e.g. *soondubu*).
 - NO all-caps shouting. NO excessive em-dashes (max 1 per paragraph).
 
