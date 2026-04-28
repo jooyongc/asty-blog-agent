@@ -19,9 +19,14 @@ export async function POST(req: NextRequest) {
     keyword?: string
     url?: string
     anchor?: string
+    mode?: 'replace' | 'append'
   } | null
-  if (!body?.site_id || !body.slug || !body.lang || !body.keyword || !body.url || !body.anchor) {
-    return NextResponse.json({ error: 'site_id, slug, lang, keyword, url, anchor required' }, { status: 400 })
+  if (!body?.site_id || !body.slug || !body.lang || !body.url || !body.anchor) {
+    return NextResponse.json({ error: 'site_id, slug, lang, url, anchor required' }, { status: 400 })
+  }
+  const mode = body.mode ?? 'replace'
+  if (mode === 'replace' && !body.keyword) {
+    return NextResponse.json({ error: 'keyword required for replace mode' }, { status: 400 })
   }
   const site = await getSite(body.site_id)
   if (!site) return NextResponse.json({ error: 'Unknown site' }, { status: 404 })
@@ -37,7 +42,7 @@ export async function POST(req: NextRequest) {
     const res = await fetch(`${site.site_url}/api/admin/posts/${encodeURIComponent(body.slug)}/affiliate`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ lang: body.lang, keyword: body.keyword, url: body.url, anchor: body.anchor }),
+      body: JSON.stringify({ lang: body.lang, keyword: body.keyword, url: body.url, anchor: body.anchor, mode }),
     })
     const text = await res.text()
     if (!res.ok) {
