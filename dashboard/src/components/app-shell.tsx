@@ -35,6 +35,7 @@ const NAV: NavGroup[] = [
     items: [
       { href: '/queue', label: '승인 대기열', icon: 'Check', badge: 'ph.9' },
       { href: '/sites', label: '사이트', icon: 'Layers' },
+      { href: '/affiliate', label: '어필리에이트', icon: 'Layers', badge: 'new' },
     ],
   },
   {
