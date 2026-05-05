@@ -16,8 +16,6 @@ type SitePosts = {
 
 type Props = { sites: SitePosts[] }
 
-// Hardcoded provider preset — the master list the user is working with.
-// Independent of asty-cabin's DB-stored providers (which may be stale).
 type Provider = { id: string; name: string }
 const PROVIDER_PRESET: Provider[] = [
   { id: 'klook', name: 'Klook' },
@@ -27,13 +25,19 @@ const PROVIDER_PRESET: Provider[] = [
 ]
 
 type Entry = {
-  uid: string         // local id only
-  provider: string    // provider id from PROVIDER_PRESET
-  keyword: string     // EN body match (required)
+  uid: string
+  provider: string
+  keyword: string
   url: string
-  anchor: string      // EN anchor (required)
-  anchor_ja: string   // optional, '' = use anchor
-  anchor_zh: string   // optional, '' = use anchor
+  anchor: string
+  anchor_ja: string
+  anchor_zh: string
+}
+
+type PostBatch = {
+  uid: string
+  slug: string
+  entries: Entry[]
 }
 
 type SavedTemplate = {
@@ -49,21 +53,26 @@ type SavedTemplate = {
 
 type LangResult = { lang: Lang; ok: boolean; message: string }
 type EntryResult = { uid: string; results: LangResult[] }
+type PostResult = { batchUid: string; slug: string; entries: EntryResult[] }
 
 type ResultState =
   | { kind: 'idle' }
-  | { kind: 'busy' }
-  | { kind: 'done'; entries: EntryResult[] }
+  | { kind: 'busy'; progress: { batchUid: string; entryUid: string } | null }
+  | { kind: 'done'; posts: PostResult[] }
   | { kind: 'err'; message: string }
 
 const STORAGE_KEY = 'affiliate-templates-v2'
 
-function newUid(): string {
-  return `e_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+function newUid(prefix: string): string {
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
 }
 
 function emptyEntry(provider = PROVIDER_PRESET[0].id): Entry {
-  return { uid: newUid(), provider, keyword: '', url: '', anchor: '', anchor_ja: '', anchor_zh: '' }
+  return { uid: newUid('e'), provider, keyword: '', url: '', anchor: '', anchor_ja: '', anchor_zh: '' }
+}
+
+function emptyBatch(slug: string): PostBatch {
+  return { uid: newUid('b'), slug, entries: [emptyEntry()] }
 }
 
 function loadTemplates(): SavedTemplate[] {
@@ -95,30 +104,76 @@ function deleteTemplate(id: string) {
 
 export function AffiliateInsertForm({ sites }: Props) {
   const [siteId, setSiteId] = useState(sites[0]?.site_id ?? '')
-  const [slug, setSlug] = useState(sites[0]?.posts[0]?.slug ?? '')
   const [allLangs, setAllLangs] = useState(true)
-  const [entries, setEntries] = useState<Entry[]>([emptyEntry()])
+  const [batches, setBatches] = useState<PostBatch[]>([emptyBatch(sites[0]?.posts[0]?.slug ?? '')])
+  const [activeBatchUid, setActiveBatchUid] = useState<string>(batches[0]?.uid ?? '')
   const [result, setResult] = useState<ResultState>({ kind: 'idle' })
   const [templates, setTemplates] = useState<SavedTemplate[]>([])
 
   useEffect(() => { setTemplates(loadTemplates()) }, [])
 
   const currentSite = useMemo(() => sites.find((s) => s.site_id === siteId), [sites, siteId])
+  const allPosts = currentSite?.posts ?? []
 
-  function updateEntry(uid: string, patch: Partial<Entry>) {
-    setEntries((prev) => prev.map((e) => (e.uid === uid ? { ...e, ...patch } : e)))
+  function handleSiteChange(newSiteId: string) {
+    setSiteId(newSiteId)
+    const firstSlug = sites.find((x) => x.site_id === newSiteId)?.posts[0]?.slug ?? ''
+    const fresh = emptyBatch(firstSlug)
+    setBatches([fresh])
+    setActiveBatchUid(fresh.uid)
+    setResult({ kind: 'idle' })
   }
-  function addEntry() {
-    setEntries((prev) => [...prev, emptyEntry()])
+
+  function updateBatch(uid: string, patch: Partial<PostBatch>) {
+    setBatches((prev) => prev.map((b) => (b.uid === uid ? { ...b, ...patch } : b)))
   }
-  function removeEntry(uid: string) {
-    setEntries((prev) => (prev.length === 1 ? prev : prev.filter((e) => e.uid !== uid)))
+  function addBatch() {
+    // Pick a slug not yet used; otherwise the first one
+    const usedSlugs = new Set(batches.map((b) => b.slug))
+    const nextPost = allPosts.find((p) => !usedSlugs.has(p.slug)) ?? allPosts[0]
+    const fresh = emptyBatch(nextPost?.slug ?? '')
+    setBatches((prev) => [...prev, fresh])
+    setActiveBatchUid(fresh.uid)
   }
+  function removeBatch(uid: string) {
+    setBatches((prev) => {
+      if (prev.length === 1) return prev
+      const next = prev.filter((b) => b.uid !== uid)
+      if (uid === activeBatchUid) setActiveBatchUid(next[0]?.uid ?? '')
+      return next
+    })
+  }
+  function updateEntry(batchUid: string, entryUid: string, patch: Partial<Entry>) {
+    setBatches((prev) =>
+      prev.map((b) =>
+        b.uid !== batchUid
+          ? b
+          : { ...b, entries: b.entries.map((e) => (e.uid === entryUid ? { ...e, ...patch } : e)) },
+      ),
+    )
+  }
+  function addEntry(batchUid: string) {
+    setBatches((prev) =>
+      prev.map((b) => (b.uid !== batchUid ? b : { ...b, entries: [...b.entries, emptyEntry()] })),
+    )
+    setActiveBatchUid(batchUid)
+  }
+  function removeEntry(batchUid: string, entryUid: string) {
+    setBatches((prev) =>
+      prev.map((b) =>
+        b.uid !== batchUid
+          ? b
+          : { ...b, entries: b.entries.length === 1 ? b.entries : b.entries.filter((e) => e.uid !== entryUid) },
+      ),
+    )
+  }
+
   function applyTemplate(t: SavedTemplate) {
-    // Find first empty-keyword entry to fill, otherwise append a new one.
-    const targetIdx = entries.findIndex((e) => !e.keyword && !e.url)
+    // Add to the active batch — into first empty entry, or append.
+    const target = batches.find((b) => b.uid === activeBatchUid) ?? batches[batches.length - 1]
+    if (!target) return
     const filled: Entry = {
-      uid: targetIdx >= 0 ? entries[targetIdx].uid : newUid(),
+      uid: newUid('e'),
       provider: t.provider,
       keyword: t.keyword,
       url: t.url,
@@ -126,11 +181,16 @@ export function AffiliateInsertForm({ sites }: Props) {
       anchor_ja: t.anchor_ja,
       anchor_zh: t.anchor_zh,
     }
-    if (targetIdx >= 0) {
-      setEntries((prev) => prev.map((e, i) => (i === targetIdx ? filled : e)))
-    } else {
-      setEntries((prev) => [...prev, filled])
-    }
+    setBatches((prev) =>
+      prev.map((b) => {
+        if (b.uid !== target.uid) return b
+        const emptyIdx = b.entries.findIndex((e) => !e.keyword && !e.url)
+        if (emptyIdx >= 0) {
+          return { ...b, entries: b.entries.map((e, i) => (i === emptyIdx ? { ...filled, uid: e.uid } : e)) }
+        }
+        return { ...b, entries: [...b.entries, filled] }
+      }),
+    )
   }
   function handleDeleteTemplate(id: string, e: React.MouseEvent) {
     e.stopPropagation()
@@ -152,83 +212,101 @@ export function AffiliateInsertForm({ sites }: Props) {
     }
   }
 
-  function validateEntries(): string | null {
-    if (!siteId || !slug) return '사이트와 글을 선택하세요.'
-    for (let i = 0; i < entries.length; i++) {
-      const e = entries[i]
-      if (!e.keyword || !e.url || !e.anchor) {
-        return `${i + 1}번 링크: 키워드 / URL / EN 앵커는 필수입니다.`
+  function validate(): string | null {
+    if (!siteId) return '사이트를 선택하세요.'
+    if (batches.length === 0) return '글이 1개 이상 필요합니다.'
+    for (let bi = 0; bi < batches.length; bi++) {
+      const b = batches[bi]
+      if (!b.slug) return `${bi + 1}번 글이 선택되지 않았습니다.`
+      if (b.entries.length === 0) return `${bi + 1}번 글의 링크가 비어 있습니다.`
+      for (let ei = 0; ei < b.entries.length; ei++) {
+        const e = b.entries[ei]
+        if (!e.keyword || !e.url || !e.anchor) {
+          return `[글 ${bi + 1} / 링크 ${ei + 1}] 키워드 / URL / EN 앵커는 필수입니다.`
+        }
+        try { new URL(e.url) } catch { return `[글 ${bi + 1} / 링크 ${ei + 1}] URL이 올바르지 않습니다.` }
       }
-      try { new URL(e.url) } catch { return `${i + 1}번 링크: URL이 올바르지 않습니다.` }
     }
+    // Detect duplicate slugs across batches
+    const slugCount = new Map<string, number>()
+    for (const b of batches) slugCount.set(b.slug, (slugCount.get(b.slug) ?? 0) + 1)
+    const dup = [...slugCount.entries()].find(([, c]) => c > 1)
+    if (dup) return `같은 글(${dup[0]})이 여러 번 선택되어 있습니다. 하나의 글에는 한 그룹만 사용하세요.`
     return null
   }
 
   async function handleSubmit() {
-    const err = validateEntries()
+    const err = validate()
     if (err) {
       setResult({ kind: 'err', message: err })
       return
     }
-    setResult({ kind: 'busy' })
+    setResult({ kind: 'busy', progress: null })
 
-    const allResults: EntryResult[] = []
-    for (const entry of entries) {
-      const langResults: LangResult[] = []
+    const allPostResults: PostResult[] = []
+    for (const batch of batches) {
+      const entryResults: EntryResult[] = []
+      for (const entry of batch.entries) {
+        setResult({ kind: 'busy', progress: { batchUid: batch.uid, entryUid: entry.uid } })
+        const langResults: LangResult[] = []
 
-      // EN: inline replace
-      const enRes = await callOne({
-        site_id: siteId, slug, lang: 'en', mode: 'replace',
-        keyword: entry.keyword, url: entry.url, anchor: entry.anchor,
-      })
-      langResults.push(buildLangResult('en', enRes))
-
-      if (allLangs) {
-        const jaRes = await callOne({
-          site_id: siteId, slug, lang: 'ja', mode: 'append',
-          url: entry.url, anchor: entry.anchor_ja || entry.anchor,
+        const enRes = await callOne({
+          site_id: siteId, slug: batch.slug, lang: 'en', mode: 'replace',
+          keyword: entry.keyword, url: entry.url, anchor: entry.anchor,
         })
-        langResults.push(buildLangResult('ja', jaRes))
+        langResults.push(buildLangResult('en', enRes))
 
-        const zhRes = await callOne({
-          site_id: siteId, slug, lang: 'zh-hans', mode: 'append',
-          url: entry.url, anchor: entry.anchor_zh || entry.anchor,
-        })
-        langResults.push(buildLangResult('zh-hans', zhRes))
+        if (allLangs) {
+          const jaRes = await callOne({
+            site_id: siteId, slug: batch.slug, lang: 'ja', mode: 'append',
+            url: entry.url, anchor: entry.anchor_ja || entry.anchor,
+          })
+          langResults.push(buildLangResult('ja', jaRes))
+
+          const zhRes = await callOne({
+            site_id: siteId, slug: batch.slug, lang: 'zh-hans', mode: 'append',
+            url: entry.url, anchor: entry.anchor_zh || entry.anchor,
+          })
+          langResults.push(buildLangResult('zh-hans', zhRes))
+        }
+
+        entryResults.push({ uid: entry.uid, results: langResults })
+
+        if (langResults[0]?.ok) {
+          saveTemplate({
+            id: `${entry.url}|${entry.keyword}`,
+            provider: entry.provider,
+            keyword: entry.keyword,
+            url: entry.url,
+            anchor: entry.anchor,
+            anchor_ja: entry.anchor_ja,
+            anchor_zh: entry.anchor_zh,
+            used_at: Date.now(),
+          })
+        }
       }
-
-      allResults.push({ uid: entry.uid, results: langResults })
-
-      // Save template if EN succeeded
-      if (langResults[0]?.ok) {
-        saveTemplate({
-          id: `${entry.url}|${entry.keyword}`,
-          provider: entry.provider,
-          keyword: entry.keyword,
-          url: entry.url,
-          anchor: entry.anchor,
-          anchor_ja: entry.anchor_ja,
-          anchor_zh: entry.anchor_zh,
-          used_at: Date.now(),
-        })
-      }
+      allPostResults.push({ batchUid: batch.uid, slug: batch.slug, entries: entryResults })
     }
+
     setTemplates(loadTemplates())
-    setResult({ kind: 'done', entries: allResults })
+    setResult({ kind: 'done', posts: allPostResults })
   }
+
+  const totalEntries = batches.reduce((sum, b) => sum + b.entries.length, 0)
+  const totalCalls = totalEntries * (allLangs ? 3 : 1)
 
   return (
     <Card>
       <CardHead>
         <Icons.Edit size={14} />
-        <div className="text-[13.5px] font-semibold">멀티 어필리에이트 삽입</div>
+        <div className="text-[13.5px] font-semibold">멀티 포스팅 × 멀티 어필리에이트</div>
       </CardHead>
 
       <div className="p-4 space-y-3">
         {templates.length > 0 && (
           <div className="mb-2 p-3 bg-[color:var(--color-bg-subtle)] rounded-md">
             <div className="text-[11.5px] text-[color:var(--color-text-3)] mb-2 uppercase tracking-wider">
-              저장된 어필리에이트 ({templates.length}) — 클릭하면 빈 행에 채워짐
+              저장된 어필리에이트 ({templates.length}) — 클릭하면 활성 글 그룹의 빈 행에 채워짐
             </div>
             <div className="flex flex-wrap gap-1.5">
               {templates.map((t) => {
@@ -259,12 +337,7 @@ export function AffiliateInsertForm({ sites }: Props) {
         <FieldRow label="사이트">
           <select
             value={siteId}
-            onChange={(e) => {
-              const s = e.target.value
-              setSiteId(s)
-              const first = sites.find((x) => x.site_id === s)?.posts[0]?.slug ?? ''
-              setSlug(first)
-            }}
+            onChange={(e) => handleSiteChange(e.target.value)}
             className="w-full px-3 py-2 text-[13px] bg-[color:var(--color-bg-subtle)] border border-[color:var(--color-line)] rounded-md"
           >
             {sites.map((s) => (
@@ -275,143 +348,182 @@ export function AffiliateInsertForm({ sites }: Props) {
           </select>
         </FieldRow>
 
-        <FieldRow label="글 (slug)">
-          <select
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            className="w-full px-3 py-2 text-[13px] bg-[color:var(--color-bg-subtle)] border border-[color:var(--color-line)] rounded-md"
-          >
-            {currentSite?.posts.map((p) => (
-              <option key={p.slug} value={p.slug}>
-                [{p.categoryId}] {p.title.slice(0, 70)}
-              </option>
-            )) ?? null}
-          </select>
-        </FieldRow>
-
         <FieldRow label="다국어 적용">
           <label className="inline-flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={allLangs} onChange={(e) => setAllLangs(e.target.checked)} />
-            <span className="text-[12.5px]">JA / ZH 본문 끝에도 어필리에이트 CTA 추가 (체크 해제 시 EN만)</span>
+            <span className="text-[12.5px]">JA / ZH 본문 끝에도 어필리에이트 CTA 추가</span>
           </label>
         </FieldRow>
 
         <div className="border-t border-[color:var(--color-line)] my-3" />
 
-        {/* Entry list */}
+        {/* Post batches */}
         <div className="space-y-3">
-          {entries.map((entry, i) => {
-            const entryResult = result.kind === 'done' ? result.entries.find((r) => r.uid === entry.uid) : null
+          {batches.map((batch, bi) => {
+            const post = allPosts.find((p) => p.slug === batch.slug)
+            const batchResult = result.kind === 'done' ? result.posts.find((p) => p.batchUid === batch.uid) : null
+            const isActive = activeBatchUid === batch.uid
             return (
               <div
-                key={entry.uid}
-                className="p-3 border border-[color:var(--color-line)] rounded-lg bg-[color:var(--color-bg-elev)] space-y-2"
+                key={batch.uid}
+                onClick={() => setActiveBatchUid(batch.uid)}
+                className={`p-3 rounded-lg space-y-2 cursor-default ${
+                  isActive
+                    ? 'border-2 border-[color:var(--color-accent)] bg-[color:var(--color-bg-subtle)]'
+                    : 'border border-[color:var(--color-line)] bg-[color:var(--color-bg-elev)]'
+                }`}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <Chip kind="ghost">{i + 1}</Chip>
+                <div className="flex items-center gap-2">
+                  <Chip kind={isActive ? 'ok' : 'ghost'} dot={isActive}>글 {bi + 1}</Chip>
                   <select
-                    value={entry.provider}
-                    onChange={(e) => updateEntry(entry.uid, { provider: e.target.value })}
-                    className="px-2 py-1 text-[12px] bg-[color:var(--color-bg-subtle)] border border-[color:var(--color-line)] rounded-md"
+                    value={batch.slug}
+                    onChange={(e) => updateBatch(batch.uid, { slug: e.target.value })}
+                    className="flex-1 px-2 py-1.5 text-[12.5px] bg-[color:var(--color-bg-elev)] border border-[color:var(--color-line)] rounded-md"
                   >
-                    {PROVIDER_PRESET.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
+                    {allPosts.map((p) => (
+                      <option key={p.slug} value={p.slug}>
+                        [{p.categoryId}] {p.title.slice(0, 70)}
                       </option>
                     ))}
                   </select>
-                  <button
-                    onClick={() => {
-                      const prov = PROVIDER_PRESET.find((p) => p.id === entry.provider)
-                      if (prov) updateEntry(entry.uid, { anchor: prov.name })
-                    }}
-                    className="text-[11px] px-2 py-0.5 rounded-md bg-[color:var(--color-bg-subtle)] border border-[color:var(--color-line)] hover:bg-[color:var(--color-line)]"
-                    title="앵커 텍스트를 provider 이름으로 채움"
-                  >
-                    앵커=provider
-                  </button>
-                  <div className="flex-1" />
-                  {entries.length > 1 && (
+                  {batches.length > 1 && (
                     <button
-                      onClick={() => removeEntry(entry.uid)}
-                      className="text-[11px] px-2 py-0.5 rounded-md text-[color:var(--color-err)] hover:bg-[color:var(--color-bg-subtle)]"
+                      onClick={(e) => { e.stopPropagation(); removeBatch(batch.uid) }}
+                      className="text-[11px] px-2 py-1 rounded-md text-[color:var(--color-err)] hover:bg-[color:var(--color-bg-subtle)]"
                     >
-                      × 삭제
+                      × 글 삭제
                     </button>
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    value={entry.keyword}
-                    onChange={(e) => updateEntry(entry.uid, { keyword: e.target.value })}
-                    placeholder="EN 키워드 (본문 매칭)"
-                    className="px-3 py-2 text-[13px] bg-[color:var(--color-bg-subtle)] border border-[color:var(--color-line)] rounded-md"
-                  />
-                  <input
-                    value={entry.url}
-                    onChange={(e) => updateEntry(entry.uid, { url: e.target.value })}
-                    placeholder="https://..."
-                    className="px-3 py-2 text-[13px] bg-[color:var(--color-bg-subtle)] border border-[color:var(--color-line)] rounded-md font-mono"
-                  />
-                </div>
-                <input
-                  value={entry.anchor}
-                  onChange={(e) => updateEntry(entry.uid, { anchor: e.target.value })}
-                  placeholder="EN 앵커 (필수)"
-                  className="w-full px-3 py-2 text-[13px] bg-[color:var(--color-bg-subtle)] border border-[color:var(--color-line)] rounded-md"
-                />
-                {allLangs && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      value={entry.anchor_ja}
-                      onChange={(e) => updateEntry(entry.uid, { anchor_ja: e.target.value })}
-                      placeholder="JA 앵커 (선택, 비우면 EN 사용)"
-                      className="px-3 py-2 text-[12.5px] bg-[color:var(--color-bg-subtle)] border border-[color:var(--color-line)] rounded-md"
-                    />
-                    <input
-                      value={entry.anchor_zh}
-                      onChange={(e) => updateEntry(entry.uid, { anchor_zh: e.target.value })}
-                      placeholder="ZH 앵커 (선택, 비우면 EN 사용)"
-                      className="px-3 py-2 text-[12.5px] bg-[color:var(--color-bg-subtle)] border border-[color:var(--color-line)] rounded-md"
-                    />
+                {post && (
+                  <div className="text-[10.5px] text-[color:var(--color-text-4)] font-mono pl-1">
+                    {post.slug}
                   </div>
                 )}
 
-                {entryResult && (
-                  <div className="pt-1.5 mt-1 border-t border-[color:var(--color-line)] space-y-1">
-                    {entryResult.results.map((r) => (
-                      <div key={r.lang} className="flex items-center gap-2 text-[11.5px]">
-                        <span className="font-mono w-14 text-[color:var(--color-text-3)]">{r.lang}</span>
-                        <Chip kind={r.ok ? 'ok' : 'err'} dot={r.ok}>
-                          {r.message}
-                        </Chip>
+                {/* Entries inside this batch */}
+                <div className="space-y-2 pt-1">
+                  {batch.entries.map((entry, ei) => {
+                    const entryResult = batchResult?.entries.find((r) => r.uid === entry.uid)
+                    return (
+                      <div
+                        key={entry.uid}
+                        className="p-2.5 border border-[color:var(--color-line)] rounded-md bg-[color:var(--color-bg-elev)] space-y-2"
+                      >
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[11px] text-[color:var(--color-text-4)] font-mono">#{ei + 1}</span>
+                          <select
+                            value={entry.provider}
+                            onChange={(e) => updateEntry(batch.uid, entry.uid, { provider: e.target.value })}
+                            className="px-2 py-1 text-[11.5px] bg-[color:var(--color-bg-subtle)] border border-[color:var(--color-line)] rounded-md"
+                          >
+                            {PROVIDER_PRESET.map((p) => (
+                              <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => {
+                              const prov = PROVIDER_PRESET.find((p) => p.id === entry.provider)
+                              if (prov) updateEntry(batch.uid, entry.uid, { anchor: prov.name })
+                            }}
+                            className="text-[11px] px-2 py-0.5 rounded-md bg-[color:var(--color-bg-subtle)] border border-[color:var(--color-line)] hover:bg-[color:var(--color-line)]"
+                            title="앵커 텍스트를 provider 이름으로 채움"
+                          >
+                            앵커=provider
+                          </button>
+                          <div className="flex-1" />
+                          {batch.entries.length > 1 && (
+                            <button
+                              onClick={() => removeEntry(batch.uid, entry.uid)}
+                              className="text-[11px] px-2 py-0.5 rounded-md text-[color:var(--color-err)] hover:bg-[color:var(--color-bg-subtle)]"
+                            >
+                              × 링크
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            value={entry.keyword}
+                            onChange={(e) => updateEntry(batch.uid, entry.uid, { keyword: e.target.value })}
+                            placeholder="EN 키워드 (본문 매칭)"
+                            className="px-3 py-1.5 text-[12.5px] bg-[color:var(--color-bg-subtle)] border border-[color:var(--color-line)] rounded-md"
+                          />
+                          <input
+                            value={entry.url}
+                            onChange={(e) => updateEntry(batch.uid, entry.uid, { url: e.target.value })}
+                            placeholder="https://..."
+                            className="px-3 py-1.5 text-[12.5px] bg-[color:var(--color-bg-subtle)] border border-[color:var(--color-line)] rounded-md font-mono"
+                          />
+                        </div>
+                        <input
+                          value={entry.anchor}
+                          onChange={(e) => updateEntry(batch.uid, entry.uid, { anchor: e.target.value })}
+                          placeholder="EN 앵커 (필수)"
+                          className="w-full px-3 py-1.5 text-[12.5px] bg-[color:var(--color-bg-subtle)] border border-[color:var(--color-line)] rounded-md"
+                        />
+                        {allLangs && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              value={entry.anchor_ja}
+                              onChange={(e) => updateEntry(batch.uid, entry.uid, { anchor_ja: e.target.value })}
+                              placeholder="JA 앵커 (선택)"
+                              className="px-3 py-1.5 text-[12px] bg-[color:var(--color-bg-subtle)] border border-[color:var(--color-line)] rounded-md"
+                            />
+                            <input
+                              value={entry.anchor_zh}
+                              onChange={(e) => updateEntry(batch.uid, entry.uid, { anchor_zh: e.target.value })}
+                              placeholder="ZH 앵커 (선택)"
+                              className="px-3 py-1.5 text-[12px] bg-[color:var(--color-bg-subtle)] border border-[color:var(--color-line)] rounded-md"
+                            />
+                          </div>
+                        )}
+
+                        {result.kind === 'busy' && result.progress?.entryUid === entry.uid && (
+                          <Chip kind="warn" dot>처리 중…</Chip>
+                        )}
+                        {entryResult && (
+                          <div className="pt-1.5 mt-1 border-t border-[color:var(--color-line)] space-y-1">
+                            {entryResult.results.map((r) => (
+                              <div key={r.lang} className="flex items-center gap-2 text-[11.5px]">
+                                <span className="font-mono w-14 text-[color:var(--color-text-3)]">{r.lang}</span>
+                                <Chip kind={r.ok ? 'ok' : 'err'} dot={r.ok}>{r.message}</Chip>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    )
+                  })}
+
+                  <button
+                    onClick={(e) => { e.stopPropagation(); addEntry(batch.uid) }}
+                    className="w-full py-1.5 text-[11.5px] rounded-md border border-dashed border-[color:var(--color-line)] text-[color:var(--color-text-3)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-text-1)]"
+                  >
+                    + 이 글에 링크 추가
+                  </button>
+                </div>
               </div>
             )
           })}
 
           <button
-            onClick={addEntry}
-            className="w-full py-2 text-[12.5px] rounded-md border border-dashed border-[color:var(--color-line)] text-[color:var(--color-text-3)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-text-1)]"
+            onClick={addBatch}
+            className="w-full py-2.5 text-[12.5px] rounded-md border border-dashed border-[color:var(--color-line)] text-[color:var(--color-text-3)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-text-1)]"
           >
-            + 링크 추가
+            + 다른 글 추가
           </button>
         </div>
 
-        <div className="pt-2 flex items-center gap-3">
+        <div className="pt-2 flex items-center gap-3 sticky bottom-0 bg-[color:var(--color-bg-elev)] -mx-4 px-4 py-3 border-t border-[color:var(--color-line)]">
           <Button variant="accent" onClick={handleSubmit} disabled={result.kind === 'busy'}>
-            {result.kind === 'busy' ? '처리 중…' : `${entries.length}개 링크 모두 삽입${allLangs ? ' (×3 lang)' : ''}`}
+            {result.kind === 'busy'
+              ? '처리 중…'
+              : `${batches.length}개 글 × ${totalEntries}개 링크 (${totalCalls} API 호출) 일괄 삽입`}
           </Button>
           {result.kind === 'err' && <Chip kind="err">실패: {result.message}</Chip>}
-          {result.kind === 'done' && (
-            <Chip kind="ok" dot>
-              완료 — 결과는 각 링크 하단 참고
-            </Chip>
-          )}
+          {result.kind === 'done' && <Chip kind="ok" dot>완료 — 결과는 각 행 하단 참고</Chip>}
         </div>
       </div>
     </Card>
