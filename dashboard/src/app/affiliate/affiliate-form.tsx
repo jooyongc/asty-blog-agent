@@ -14,7 +14,7 @@ type SitePosts = {
   affiliate: AffiliateExport | null
 }
 
-type Props = { sites: SitePosts[] }
+type Props = { sites: SitePosts[]; onSubmitted?: () => void }
 
 type Provider = { id: string; name: string }
 const PROVIDER_PRESET: Provider[] = [
@@ -102,7 +102,7 @@ function deleteTemplate(id: string) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(all))
 }
 
-export function AffiliateInsertForm({ sites }: Props) {
+export function AffiliateInsertForm({ sites, onSubmitted }: Props) {
   const [siteId, setSiteId] = useState(sites[0]?.site_id ?? '')
   const [allLangs, setAllLangs] = useState(true)
   const [batches, setBatches] = useState<PostBatch[]>([emptyBatch(sites[0]?.posts[0]?.slug ?? '')])
@@ -290,6 +290,7 @@ export function AffiliateInsertForm({ sites }: Props) {
 
     setTemplates(loadTemplates())
     setResult({ kind: 'done', posts: allPostResults })
+    onSubmitted?.()
   }
 
   const totalEntries = batches.reduce((sum, b) => sum + b.entries.length, 0)
