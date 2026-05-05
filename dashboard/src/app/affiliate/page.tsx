@@ -31,11 +31,13 @@ export default async function AffiliatePage() {
           <div className="text-[13.5px] font-semibold">어필리에이트 수동 삽입</div>
         </CardHead>
         <div className="px-4 py-3 text-[12px] text-[color:var(--color-text-3)] leading-relaxed">
-          <div className="mb-2 text-[12.5px]">발행된 글에 어필리에이트 링크를 직접 추가합니다. 본문 내 키워드 첫 등장 위치가 <code>[앵커](URL)</code> 형태로 치환됩니다.</div>
+          <div className="mb-2 text-[12.5px]">한 글에 여러 개의 어필리에이트 링크를 동시에 삽입합니다. provider별로 키워드와 URL을 분리해서 추가하세요.</div>
           <ul className="list-disc list-inside space-y-1">
-            <li>키워드는 대소문자 구분 없이 단어 경계 매칭됩니다 (예: "klook" → "Klook" 매치).</li>
-            <li>같은 URL이 본문에 이미 있으면 중복 삽입하지 않습니다 (멱등성).</li>
-            <li>현재 사이트에 등록된 provider가 있으면 아래 단축버튼으로 채워넣을 수 있습니다.</li>
+            <li><b>EN</b>: 키워드 첫 등장 위치를 인라인 치환 (단어 경계, 대소문자 무시)</li>
+            <li><b>JA / ZH</b>: 본문 끝에 단독 CTA 추가 (영문 키워드는 번역 본문에 없으므로)</li>
+            <li>같은 URL이 본문에 이미 있으면 중복 삽입하지 않음 (멱등성)</li>
+            <li>지원 provider: <b>Klook · KKday · Viator · 세시간전</b></li>
+            <li>한 번 삽입한 링크는 자동으로 저장되어 다음에 클릭으로 재사용 가능</li>
           </ul>
         </div>
       </Card>
