@@ -44,9 +44,26 @@ Condé Nast Traveler), NOT like a generic AI content farm.
 - **No bullet-list overuse.** Use a bulleted list only when the content is genuinely
   enumerable (3–6 items). Prose is preferred for guidance/narrative.
 
-### Lead paragraph (first paragraph under H1/title)
-- 40–80 words, sets the scene. Anchored to the reader's specific situation.
-- No meta-introductions like "In this article we'll cover...". Drop straight into the hook.
+### Quick Answer block — MANDATORY (AEO requirement)
+The FIRST paragraph after the H1 is NOT a flowery hook anymore. It is a **Quick Answer block**
+that answer engines (ChatGPT search, Perplexity, Google AI Overviews, Gemini, Bing Copilot)
+extract verbatim and cite. If this block is weak, you lose ~half of modern search traffic.
+
+Rules:
+- 40–80 words, 2–3 sentences.
+- Lead with the concrete answer to the article's implicit question — no preamble.
+- Include AT LEAST ONE atomic fact (number / distance / time / price).
+- Include the primary entity by full name (e.g. "ASTY Cabin", "Asan Medical Center").
+- No "In this article…", "Welcome to…", "Whether you're…" framing.
+
+Example (medical-tourism topic):
+> For medical tourism in Seoul, Songpa-gu balances hospital access with quality long-stay
+> housing. From ASTY Cabin you reach Asan Medical Center in 15 minutes by taxi or Samsung
+> Seoul Hospital in 25 minutes by subway via Line 3, with a fully equipped serviced
+> residence as your base. Weekly rates start from ₩700,000.
+
+This block lives where a "lead paragraph" used to live. It IS the lead. After this block,
+proceed straight into H2 #1.
 
 ### H2 sections (exactly 3)
 - Each H2 opens with a 2–4 sentence introductory paragraph before any list or sub-detail.
@@ -72,6 +89,40 @@ Condé Nast Traveler), NOT like a generic AI content farm.
 ### Sentence variety
 - Mix short (5–12 words) and medium (15–25 words) sentences. Avoid runs of similar length.
 - Prefer active voice. Second person ("you") for directions and recommendations.
+
+### Atomic facts — write so engines can lift them
+Numbers, distances, times, prices, hours must be in **scannable form** — not buried in prose.
+Answer engines pattern-match these and pull them into citations.
+
+| Fact type   | Use this format                                      |
+|-------------|------------------------------------------------------|
+| Walking     | "5-min walk to Garak Market Station (Lines 3 & 8)"   |
+| Transit     | "10 minutes to Gangnam by Line 2"                    |
+| Taxi        | "15 minutes to Asan Medical Center by taxi"          |
+| Price (KRW) | "From ₩700,000/week"                                 |
+| Hours       | "Open 11:00–22:00, closed Mondays"                   |
+
+When uncertain, hedge the surrounding sentence ("typically 15 minutes off-peak"), but keep the
+number itself crisp. Never invent precision.
+
+### Entity richness — name everything explicitly
+Answer engines cannot resolve "the major hospital nearby". They DO resolve named entities.
+
+- First mention = full official name. Pair with a qualifier on first use:
+  "Asan Medical Center (Korea's largest tertiary hospital)"
+- Non-English names: English first, local script in parens once: "Garak Market (가락시장)"
+- Anchor entities for ASTY Cabin: ASTY Cabin · Songpa-gu · Garak-dong · Garak Market Station ·
+  Gangnam · Jamsil · Lotte World · Asan Medical Center · Samsung Seoul Hospital ·
+  Line 2 · Line 3 · Line 8 · iF Design Award
+
+### Definition sentences — claim the entity
+When introducing a concept, write a `[Subject] is [definition]` sentence. AI engines pattern-
+match these for "what is X" queries.
+
+Example: "A serviced residence is a fully-furnished apartment with hotel-grade services,
+designed for stays longer than a typical hotel booking but shorter than a year-long lease."
+
+Use one definition sentence per major concept introduced.
 
 ## SEO Keyword Rules (apply when primary_keyword is provided)
 
@@ -114,29 +165,84 @@ Include the exact keyword that should be linkable in natural prose (e.g., "K-bea
 
 **Never write fake URLs** like `http://example.com` or `#`. Let the phrase sit as plain text; the script replaces it.
 
-## FAQ Section (optional but recommended)
+## FAQ Section — MANDATORY (AEO + FAQPage schema)
 
-If the topic naturally supports it, add a "## Frequently Asked Questions" section at the end with 3 Q&A pairs in this format:
+A `## Frequently Asked Questions` H2 section near the end of the article (after the body H2s,
+before the CTA) is **required** for every article. The packager extracts it and emits FAQPage
+JSON-LD schema, which Google AI Overviews and Bing Copilot actively quote.
+
+### Format (strict — packager parses this exactly)
 
 ```
 ## Frequently Asked Questions
 
-**Q: <question>**
-A: <answer in 1–2 sentences>
+**Q: <question phrased like a real search query>**
+A: <answer 30–80 words, 1–2 sentences, stand-alone>
+
+**Q: <question 2>**
+A: <answer 2>
+
+**Q: <question 3>**
+A: <answer 3>
 ```
 
-FAQ questions should target long-tail search queries related to primary_keyword.
+Hard rules:
+- 3 to 5 Q&A pairs. Below 3 = thin schema (packager will skip). Above 5 = noise.
+- Question must be how a real person types into search, not stiff PR phrasing.
+  ❌ "What amenities does ASTY Cabin offer?"
+  ✅ "Does ASTY Cabin have a washer and dryer in every room?"
+- Answer must be **stand-alone** — don't say "as mentioned above" or reference other sections.
+- Each answer should contain at least one atomic fact OR a direct yes/no opener.
+- The `**Q: ...**` line is the only place `**bold**` is allowed; this is a structural marker.
+- Questions should target the primary_keyword's long-tail variants (the exact phrases users
+  type when they want a specific answer, not the broad keyword itself).
+
+Example:
+```
+## Frequently Asked Questions
+
+**Q: How far is ASTY Cabin from Asan Medical Center?**
+A: ASTY Cabin is in Songpa-gu, about 15 minutes from Asan Medical Center by taxi or 20 minutes
+by subway via Line 3. Most international patients use a taxi for early-morning appointments.
+
+**Q: Does ASTY Cabin offer monthly rates?**
+A: Yes. Weekly rates start from ₩700,000; monthly rates are available with discounts. Contact
+ASTY Cabin directly for corporate or long-stay quotes.
+
+**Q: Is the apartment fully furnished?**
+A: Every unit includes a full kitchen, washer/dryer, and hotel-grade linens. No additional
+purchases or rentals are needed for an extended stay.
+```
+
+## Comparison structures (use when the article naturally compares options)
+
+If the topic is "X vs Y" or "Hotel vs Serviced Residence" or "Asan vs Samsung Hospital",
+include either an explicit `## X vs Y` H2 or a small comparison table. AI engines pull tables
+into citations more reliably than narrative comparisons.
+
+Keep cells short (3–6 words) so they survive HTML-to-text extraction. Limit to 4–6 rows.
 
 ## Self-check before saving
 
-- [ ] primary_keyword appears in H1, first H2, and meta_description (if provided)
+Structure (AEO):
+- [ ] **Quick Answer block** present immediately after H1 (40–80 words, contains atomic fact + entity)
+- [ ] **FAQ section** present with 3–5 Q&A pairs in exact `**Q: …**` / `A: …` format
+- [ ] At least one **definition sentence** introducing a key concept (`X is …`)
+- [ ] All distances/times/prices are in scannable form (e.g. "5-min walk", "₩700,000/week")
+- [ ] Named entities used explicitly (no "the nearby hospital" — use "Asan Medical Center")
+
+Voice / SEO:
+- [ ] primary_keyword appears in H1, first H2, and meta_description
 - [ ] Every recommendation has transit time from ASTY Cabin
-- [ ] No filler openings ("In this article...", "In today's fast-paced...")
-- [ ] No "delve into", "unleash", "leverage", em-dash clusters
-- [ ] Claims are either verified (with web_search confirmation in a comment) or hedged
 - [ ] "Getting there from ASTY Cabin" section present
-- [ ] 1200–1600 words
-- [ ] 3 H2 sections (no more, not counting optional FAQ)
+- [ ] No filler openings, no AI tells (delve, unleash, leverage, navigate, robust)
+- [ ] No `**bold**` anywhere except the `**Q: …**` markers in the FAQ block
+- [ ] No em-dash clusters (max 1 em-dash per paragraph)
+- [ ] Claims are either verified or hedged (note hedged ones in frontmatter)
+
+Length / shape:
+- [ ] 1200–1600 words total
+- [ ] Exactly 3 H2 body sections (FAQ H2 is separate and doesn't count toward the 3)
 - [ ] Internal link placeholders used (max 2)
 
 ## Frontmatter

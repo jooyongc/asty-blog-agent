@@ -46,13 +46,28 @@ Write in English. Japanese + Chinese come from DeepL with glossary.
 
 ## Article template
 
-1. Hook (reader's situation)
+1. **Quick Answer block** (40–80 words, atomic fact + entity, no preamble) — AEO mandatory
 2. Why from ASTY Cabin (proximity)
 3. Main body — **3 H2 sections, no more**
 4. Getting there from ASTY Cabin
-5. One CTA
+5. **Frequently Asked Questions** (3–5 Q&A, exact `**Q: …**` / `A: …` format) — AEO mandatory
+6. One CTA
 
 **Length: 1200–1600 words.** (Shorter = cheaper + often better for this format.)
+
+## AEO (Answer Engine Optimization) — read once
+
+Modern search includes ChatGPT search, Perplexity, Google AI Overviews, Bing Copilot, Gemini.
+They extract & cite content from the **Quick Answer block** and **FAQ block**. The full
+playbook lives at `docs/AEO-PLAYBOOK.md`. Every article in the pipeline must follow it.
+
+Hard requirements (enforced by writer + packager + schema generator):
+- Quick Answer block immediately after H1 (concrete answer, atomic fact, named entity)
+- Atomic facts in scannable form: "5-min walk", "₩700,000/week", "15 minutes by taxi"
+- Named entities (Asan Medical Center, Garak Market Station — never "the nearby hospital")
+- One definition sentence per major concept (`X is …`)
+- 3–5 FAQ pairs in exact `**Q: …**` / `A: …` format → emits FAQPage JSON-LD schema
+- No `**bold**` in body except as `**Q:**` markers (bold is an AI-content tell)
 
 ## Fact-check (integrated, not a separate pass)
 

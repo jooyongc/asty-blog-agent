@@ -248,10 +248,24 @@ async function main(): Promise<void> {
   const schemas: object[] = [article, buildBreadcrumbSchema(meta)];
   const extras: string[] = [];
 
-  const faqs = parseFaq(body);
-  if (faqs.length > 0) {
+  // Prefer FAQ entries from meta.json (extracted by packager — canonical, cleaned).
+  // Fall back to parsing the en.md body directly so schemas still emit if the
+  // packager step was skipped.
+  let faqs: FaqItem[] = []
+  const metaFaq = (meta as { faq?: Array<{ question: string; answer: string }> }).faq
+  if (Array.isArray(metaFaq) && metaFaq.length >= 3) {
+    faqs = metaFaq
+      .filter((f) => f && typeof f.question === 'string' && typeof f.answer === 'string')
+      .map((f) => ({ question: f.question.trim(), answer: f.answer.trim() }))
+  } else {
+    faqs = parseFaq(body)
+  }
+  if (faqs.length >= 3) {
     schemas.push(buildFaqSchema(faqs));
     extras.push(`FAQPage(${faqs.length})`);
+  } else if (faqs.length > 0) {
+    // Under 3 = below FAQPage spec recommendation. Skip emission to avoid weak schema.
+    extras.push(`FAQPage skipped (${faqs.length}<3)`);
   }
 
   const howTo = parseHowTo(body);
