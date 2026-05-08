@@ -176,6 +176,11 @@ export async function POST(req: NextRequest) {
     }).catch(() => undefined)
   }
 
+  // Always override LLM-supplied generated_at with server time. Haiku tends to
+  // hallucinate this field from its training-data era, which made the dashboard
+  // show "2025-04-30" for a generation that just happened.
+  parsed.generated_at = new Date().toISOString()
+
   return NextResponse.json({
     ...parsed,
     meta: {

@@ -59,7 +59,7 @@ If a direction_text doesn't clearly map to a pillar, choose the closest fit and 
 {
   "site_id": "<copied>",
   "direction_text": "<copied>",
-  "generated_at": "<ISO-8601 UTC>",
+  "generated_at": "<ISO-8601 UTC — set to '0000-00-00T00:00:00Z'; the orchestrator overwrites with server time>",
   "proposals": [
     {
       "rank": 1,
