@@ -14,10 +14,30 @@ type Proposal = {
   rank: number
   title: string
   category: string
+  pillar?: 'long-stay' | 'medical' | 'corporate' | 'off-pillar'
   rationale: string
   primary_keyword_hint?: string
   seo_score: number
   striking_distance_hit: boolean
+}
+
+type PillarFocus = 'auto' | 'long-stay' | 'medical' | 'corporate'
+type SearchIntent = 'auto' | 'informational' | 'commercial'
+type ContentFormat = 'auto' | 'guide' | 'comparison' | 'list'
+type DifficultyPref = 'auto' | 'striking' | 'discovery'
+
+type SeoTuning = {
+  pillar_focus: PillarFocus
+  search_intent: SearchIntent
+  content_format: ContentFormat
+  difficulty: DifficultyPref
+}
+
+const DEFAULT_TUNING: SeoTuning = {
+  pillar_focus: 'auto',
+  search_intent: 'auto',
+  content_format: 'auto',
+  difficulty: 'auto',
 }
 
 type DirectorResponse = {
@@ -69,6 +89,8 @@ export default function DirectionClient({ siteId, siteLabel }: DirectionClientPr
   const [activeCat, setActiveCat] = useState<DirectionCategory | 'all'>('all')
   const [templatesOpen, setTemplatesOpen] = useState(true)
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null)
+  const [tuning, setTuning] = useState<SeoTuning>(DEFAULT_TUNING)
+  const [tuningOpen, setTuningOpen] = useState(false)
 
   const templates = useMemo(() => orderedTemplates(), [])
   const filteredTemplates = useMemo(
@@ -91,7 +113,7 @@ export default function DirectionClient({ siteId, siteLabel }: DirectionClientPr
       const res = await fetch('/api/direction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ site_id: siteId, direction_text: input }),
+        body: JSON.stringify({ site_id: siteId, direction_text: input, seo_tuning: tuning }),
       })
       const text = await res.text()
       if (!res.ok) {
@@ -293,6 +315,14 @@ export default function DirectionClient({ siteId, siteLabel }: DirectionClientPr
               fontFamily: 'var(--font-sans)',
             }}
           />
+          <SeoTuningPanel
+            tuning={tuning}
+            onChange={setTuning}
+            open={tuningOpen}
+            onToggle={() => setTuningOpen((v) => !v)}
+            onReset={() => setTuning(DEFAULT_TUNING)}
+          />
+
           <div className="flex gap-2 mt-2.5 flex-wrap items-center">
             <Button variant="accent" onClick={generate} disabled={loading}>
               <Icons.Sparkle size={13} /> {loading ? '제안 생성 중…' : '주제 제안 생성'}
@@ -450,5 +480,170 @@ export default function DirectionClient({ siteId, siteLabel }: DirectionClientPr
         </Card>
       )}
     </div>
+  )
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * SEO Tuning Panel — adjusts how Director scores proposals.
+ * All knobs default to 'auto' (model decides). User overrides shift the
+ * scoring weights server-side.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+const PILLAR_OPTIONS: Array<{ id: PillarFocus; label: string; hint: string }> = [
+  { id: 'auto', label: '자동', hint: '방향 텍스트에서 추론' },
+  { id: 'long-stay', label: '장기체류', hint: '거주·생활·이주' },
+  { id: 'medical', label: '의료관광', hint: '병원·치료·회복' },
+  { id: 'corporate', label: '기업이주', hint: '비즈니스·법인' },
+]
+const INTENT_OPTIONS: Array<{ id: SearchIntent; label: string; hint: string }> = [
+  { id: 'auto', label: '자동', hint: '주제에 따라' },
+  { id: 'informational', label: '정보형', hint: '"how to / what is"' },
+  { id: 'commercial', label: '상업형', hint: '"best / vs / 가격"' },
+]
+const FORMAT_OPTIONS: Array<{ id: ContentFormat; label: string; hint: string }> = [
+  { id: 'auto', label: '자동', hint: '주제에 따라' },
+  { id: 'guide', label: '가이드', hint: '단계별 설명' },
+  { id: 'comparison', label: '비교', hint: 'X vs Y' },
+  { id: 'list', label: '리스트', hint: 'Top N · 큐레이션' },
+]
+const DIFFICULTY_OPTIONS: Array<{ id: DifficultyPref; label: string; hint: string }> = [
+  { id: 'auto', label: '자동', hint: '균형' },
+  { id: 'striking', label: 'GSC 우선', hint: '8~20위 키워드 끌어올리기' },
+  { id: 'discovery', label: '신규 발굴', hint: '저경쟁 신규 키워드' },
+]
+
+function SeoTuningPanel({
+  tuning,
+  onChange,
+  open,
+  onToggle,
+  onReset,
+}: {
+  tuning: SeoTuning
+  onChange: (t: SeoTuning) => void
+  open: boolean
+  onToggle: () => void
+  onReset: () => void
+}) {
+  const isCustomized =
+    tuning.pillar_focus !== 'auto' ||
+    tuning.search_intent !== 'auto' ||
+    tuning.content_format !== 'auto' ||
+    tuning.difficulty !== 'auto'
+
+  return (
+    <div
+      className="mt-2 rounded-lg border"
+      style={{ borderColor: 'var(--color-line-2)' }}
+    >
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-2 px-3 py-2 text-[11.5px] hover:bg-[color:var(--color-bg-subtle)]"
+      >
+        <span style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 120ms' }}>▶</span>
+        <span className="font-semibold">SEO 옵션</span>
+        {isCustomized ? (
+          <Chip kind="ok" dot>커스텀</Chip>
+        ) : (
+          <Chip kind="ghost">전부 자동</Chip>
+        )}
+        <div className="flex-1" />
+        {isCustomized && (
+          <span
+            onClick={(e) => { e.stopPropagation(); onReset() }}
+            className="text-[10.5px] text-[color:var(--color-text-3)] hover:text-[color:var(--color-text-1)] underline cursor-pointer"
+          >
+            기본값으로
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className="p-3 border-t" style={{ borderColor: 'var(--color-line)' }}>
+          <TuningRow label="필러 초점" hint="제안 3개 모두 이 필러로 강제 (auto면 모델이 알아서)">
+            {PILLAR_OPTIONS.map((o) => (
+              <TuningChip
+                key={o.id}
+                active={tuning.pillar_focus === o.id}
+                onClick={() => onChange({ ...tuning, pillar_focus: o.id })}
+                label={o.label}
+                hint={o.hint}
+              />
+            ))}
+          </TuningRow>
+          <TuningRow label="검색 의도" hint="키워드 톤을 정보형/상업형으로 편향">
+            {INTENT_OPTIONS.map((o) => (
+              <TuningChip
+                key={o.id}
+                active={tuning.search_intent === o.id}
+                onClick={() => onChange({ ...tuning, search_intent: o.id })}
+                label={o.label}
+                hint={o.hint}
+              />
+            ))}
+          </TuningRow>
+          <TuningRow label="컨텐츠 형식" hint="제목 형태에 영향">
+            {FORMAT_OPTIONS.map((o) => (
+              <TuningChip
+                key={o.id}
+                active={tuning.content_format === o.id}
+                onClick={() => onChange({ ...tuning, content_format: o.id })}
+                label={o.label}
+                hint={o.hint}
+              />
+            ))}
+          </TuningRow>
+          <TuningRow label="난이도 선호" hint="GSC 데이터 활용 강도">
+            {DIFFICULTY_OPTIONS.map((o) => (
+              <TuningChip
+                key={o.id}
+                active={tuning.difficulty === o.id}
+                onClick={() => onChange({ ...tuning, difficulty: o.id })}
+                label={o.label}
+                hint={o.hint}
+              />
+            ))}
+          </TuningRow>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TuningRow({ label, hint, children }: { label: string; hint: string; children: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-[100px_1fr] gap-3 items-start py-1.5">
+      <div className="pt-1.5">
+        <div className="text-[11.5px] font-semibold text-[color:var(--color-text-2)]">{label}</div>
+        <div className="text-[10px] text-[color:var(--color-text-4)] mt-0.5 leading-snug">{hint}</div>
+      </div>
+      <div className="flex flex-wrap gap-1">{children}</div>
+    </div>
+  )
+}
+
+function TuningChip({
+  active,
+  onClick,
+  label,
+  hint,
+}: {
+  active: boolean
+  onClick: () => void
+  label: string
+  hint: string
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={hint}
+      className="text-[11px] px-2 py-1 rounded-md border transition"
+      style={{
+        background: active ? 'var(--color-accent)' : 'var(--color-bg-elev)',
+        color: active ? '#fff' : 'var(--color-text-2)',
+        borderColor: active ? 'transparent' : 'var(--color-line-2)',
+      }}
+    >
+      {label}
+    </button>
   )
 }

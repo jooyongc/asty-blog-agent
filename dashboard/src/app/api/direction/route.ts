@@ -95,9 +95,21 @@ export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => null)) as {
     site_id?: string
     direction_text?: string
+    seo_tuning?: {
+      pillar_focus?: 'auto' | 'long-stay' | 'medical' | 'corporate'
+      search_intent?: 'auto' | 'informational' | 'commercial'
+      content_format?: 'auto' | 'guide' | 'comparison' | 'list'
+      difficulty?: 'auto' | 'striking' | 'discovery'
+    }
   } | null
   if (!body?.site_id || !body.direction_text?.trim()) {
     return NextResponse.json({ error: 'site_id and direction_text required' }, { status: 400 })
+  }
+  const tuning = {
+    pillar_focus: body.seo_tuning?.pillar_focus ?? 'auto',
+    search_intent: body.seo_tuning?.search_intent ?? 'auto',
+    content_format: body.seo_tuning?.content_format ?? 'auto',
+    difficulty: body.seo_tuning?.difficulty ?? 'auto',
   }
   const site = await getSite(body.site_id)
   if (!site) return NextResponse.json({ error: 'Unknown site' }, { status: 404 })
@@ -118,6 +130,7 @@ export async function POST(req: NextRequest) {
     recent_titles: context.recent_titles,
     recent_feedback: context.recent_feedback,
     gsc_striking: context.gsc_striking,
+    seo_tuning: tuning,
   }
 
   const client = new Anthropic({ apiKey: anthropicKey })

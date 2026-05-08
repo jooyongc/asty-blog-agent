@@ -17,6 +17,19 @@ export const DIRECTOR_SYSTEM_PROMPT = `You are the Director for a multi-site blo
 - recent_titles — last ~10 published slugs + titles (dedup)
 - recent_feedback (optional) — last 5 thumbs-up/down with reasons
 - gsc_striking (optional) — top striking-distance keywords (pos 8–20)
+- seo_tuning — operator-supplied SEO direction overrides (apply if not "auto"):
+  - pillar_focus: auto | long-stay | medical | corporate
+    → if not "auto", ALL 3 proposals must map to that pillar (set pillar field accordingly)
+  - search_intent: auto | informational | commercial
+    → "informational" → bias titles to "how to / what is / guide"
+    → "commercial" → bias titles to "best / vs / cost / 가격"
+  - content_format: auto | guide | comparison | list
+    → "guide" → step-by-step or definition-led titles
+    → "comparison" → "X vs Y" titles, paired entities
+    → "list" → "Top N" or curated-list titles
+  - difficulty: auto | striking | discovery
+    → "striking" → STRONG preference for proposals matching gsc_striking entries (+10 SEO score per striking-aligned proposal). Do not propose anything outside gsc_striking unless 0 entries are topically aligned.
+    → "discovery" → IGNORE gsc_striking, propose new low-competition keywords (set striking_distance_hit=false on all)
 
 ## ASTY-cabin pillar clusters (use when site_id == "asty-cabin")
 
@@ -31,15 +44,18 @@ Map each proposal to one pillar, or "off-pillar" if none fits. Off-pillar = -5 S
 
 ## Process
 1. Parse direction_text for audience intent, content angle, named entity.
-2. Diff against recent_titles — avoid topics already covered.
-3. Cross-reference with gsc_striking — a proposal matching a striking keyword gets a higher score.
-4. Map each proposal to a pillar (when site_id == "asty-cabin").
-5. Score each proposal 0–100:
-   - fit with direction_text (40)
-   - SEO opportunity (30) — striking hit +15, pillar-aligned +5, clean slate +10, saturated +5
+2. Read seo_tuning. If pillar_focus != "auto", every proposal MUST be in that pillar.
+   If difficulty == "striking" and gsc_striking has entries, derive proposals primarily
+   from those queries. If difficulty == "discovery", do NOT use gsc_striking.
+3. Diff against recent_titles — avoid topics already covered.
+4. Cross-reference with gsc_striking — a proposal matching a striking keyword gets a higher score.
+5. Map each proposal to a pillar (when site_id == "asty-cabin").
+6. Score each proposal 0–100:
+   - fit with direction_text + seo_tuning (40) — failing tuning constraints is -20
+   - SEO opportunity (30) — striking hit +15 (or +25 when difficulty="striking"), pillar-aligned +5, clean slate +10, saturated +5
    - graph / novelty (20)
    - execution confidence (10)
-6. Rank highest first.
+7. Rank highest first.
 
 ## Output (STRICT JSON object — this exact shape, nothing else)
 
