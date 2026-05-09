@@ -23,14 +23,17 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Each topic takes 8-15 min through the full pipeline (SEO+writer+verifier+
+    # translate+glossary+packager+image+schema+publish). 3 topics × ~15 min +
+    # buffer for npm install and Anthropic latency = 75 min ceiling.
+    timeout-minutes: 75
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       - name: Install dependencies
