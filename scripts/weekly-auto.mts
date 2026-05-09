@@ -64,6 +64,34 @@ async function fetchTopics(): Promise<Array<{ id: string; title: string; categor
     .sort((a, b) => (b.seo_score ?? 0) - (a.seo_score ?? 0))
 }
 
+/**
+ * Recover topics stuck in 'in_progress' from previous runs that crashed before
+ * reaching the success/fail branch (most often: GitHub Actions timeout). A
+ * topic older than `staleMinutes` is reverted to 'approved' so the current run
+ * can pick it up.
+ */
+async function recoverStaleInProgress(staleMinutes = 90): Promise<number> {
+  try {
+    const res = await fetch(`${SITE_URL}/api/admin/queue/topic?site_id=${SITE_ID}&status=in_progress&limit=50`, {
+      headers: { Authorization: `Bearer ${KEY}` },
+    })
+    if (!res.ok) return 0
+    const j = (await res.json()) as { rows: Array<{ id: string; title: string; updated_at?: string; created_at?: string }> }
+    const cutoff = Date.now() - staleMinutes * 60 * 1000
+    let recovered = 0
+    for (const r of j.rows) {
+      const ts = new Date(r.updated_at ?? r.created_at ?? 0).getTime()
+      if (Number.isFinite(ts) && ts > 0 && ts > cutoff) continue // still recent — leave alone
+      await patchTopicStatus(r.id, 'approved')
+      console.log(`[weekly-auto] recovered stale in_progress → approved: ${r.title?.slice(0, 60) ?? r.id}`)
+      recovered++
+    }
+    return recovered
+  } catch {
+    return 0
+  }
+}
+
 async function fetchPublishedSlugs(): Promise<Set<string>> {
   const res = await fetch(`${SITE_URL}/api/admin/posts/export?limit=50`, {
     headers: { Authorization: `Bearer ${KEY}` },
@@ -85,6 +113,12 @@ async function patchTopicStatus(id: string, status: string): Promise<void> {
 
 async function main(): Promise<void> {
   console.log(`[weekly-auto] site=${SITE_ID} limit=${LIMIT} dry=${DRY}`)
+
+  // Recover stale in_progress topics first — these were stuck from prior crashes
+  // (GitHub Actions timeout, OOM, etc.) and would otherwise never run again.
+  const recovered = await recoverStaleInProgress(90)
+  if (recovered > 0) console.log(`[weekly-auto] recovered ${recovered} stale in_progress topics`)
+
   const topics = await fetchTopics()
   const published = await fetchPublishedSlugs()
   console.log(`[weekly-auto] ${topics.length} approved topics in queue, ${published.size} posts already published`)
