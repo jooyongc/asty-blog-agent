@@ -9,6 +9,7 @@ import {
   type DirectionCategory,
   type DirectionTemplate,
 } from '@/lib/direction-templates'
+import { DirectionHistory } from './direction-history'
 
 type Proposal = {
   rank: number
@@ -373,6 +374,8 @@ export default function DirectionClient({ siteId, siteLabel }: DirectionClientPr
           )}
         </div>
       </Card>
+
+      <DirectionHistory siteId={siteId} />
 
       {proposals.length > 0 && (
         <>
