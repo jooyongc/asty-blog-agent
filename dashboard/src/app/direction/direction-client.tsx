@@ -15,6 +15,7 @@ type Proposal = {
   title: string
   category: string
   pillar?: 'long-stay' | 'medical' | 'corporate' | 'off-pillar'
+  aeo_format?: 'definition' | 'comparison' | 'guide' | 'list' | 'data'
   rationale: string
   primary_keyword_hint?: string
   seo_score: number
@@ -63,6 +64,7 @@ type VoteState = Record<number, VoteKind>
 
 const CATEGORY_OPTIONS: Array<DirectionCategory | 'all'> = [
   'all',
+  'aeo-pillar',
   'seasonal',
   'food',
   'transport',
@@ -173,6 +175,8 @@ export default function DirectionClient({ siteId, siteLabel }: DirectionClientPr
             rationale: proposal.rationale,
             seo_score: proposal.seo_score,
             primary_keyword_hint: proposal.primary_keyword_hint,
+            pillar: proposal.pillar,
+            aeo_format: proposal.aeo_format,
             source_direction: response.direction_text,
             status: 'approved',
           }),
@@ -262,11 +266,14 @@ export default function DirectionClient({ siteId, siteLabel }: DirectionClientPr
                         : 'transparent',
                     }}
                   >
-                    <div className="flex items-center gap-1.5 mb-1">
+                    <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                       <span className="text-[16px] leading-none">{t.emoji}</span>
                       <span className="text-[12.5px] font-semibold truncate">
                         {t.title}
                       </span>
+                      {t.category === 'aeo-pillar' && (
+                        <Chip kind="ok" dot>AEO</Chip>
+                      )}
                       {isSeasonal && (
                         <Chip kind="ok" dot>
                           제철
@@ -279,6 +286,20 @@ export default function DirectionClient({ siteId, siteLabel }: DirectionClientPr
                     <div className="text-[11px] text-[color:var(--color-text-3)] leading-snug">
                       {t.hint}
                     </div>
+                    {(t.pillar || t.aeo_format) && (
+                      <div className="mt-1.5 flex gap-1 flex-wrap">
+                        {t.pillar && (
+                          <span className="text-[9.5px] px-1.5 py-0.5 rounded-md bg-[color:var(--color-bg-subtle)] text-[color:var(--color-text-3)]">
+                            {t.pillar}
+                          </span>
+                        )}
+                        {t.aeo_format && (
+                          <span className="text-[9.5px] px-1.5 py-0.5 rounded-md bg-[color:var(--color-bg-subtle)] text-[color:var(--color-text-3)]">
+                            {t.aeo_format}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </button>
                 )
               })}

@@ -11,6 +11,8 @@ type Proposal = {
   rank: number
   title: string
   category: string
+  pillar?: 'long-stay' | 'medical' | 'corporate' | 'off-pillar'
+  aeo_format?: 'definition' | 'comparison' | 'guide' | 'list' | 'data'
   rationale: string
   primary_keyword_hint?: string
   seo_score: number

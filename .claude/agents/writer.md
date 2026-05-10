@@ -65,9 +65,33 @@ Example (medical-tourism topic):
 This block lives where a "lead paragraph" used to live. It IS the lead. After this block,
 proceed straight into H2 #1.
 
-### H2 sections (exactly 3)
-- Each H2 opens with a 2–4 sentence introductory paragraph before any list or sub-detail.
-- Use title case, descriptive (no cute clickbait). Preserve primary_keyword in the first H2.
+### H2 sections (exactly 3) — AEO question-format
+
+**Every H2 must be phrased as a real user search question** (not a noun phrase), and must
+be immediately followed by a **single-line 30–80 char direct answer** before any other prose.
+This is the highest-ROI AEO pattern: AI engines extract the H2 + direct-answer pair into
+Featured Snippets and AI Overview citations.
+
+❌ Don't (noun-phrase H2 buried in prose):
+> ## Distance to Asan Medical Center
+> ASTY Cabin sits in Songpa-gu, and from there many guests find the journey…
+
+✅ Do (question-format H2 + direct answer line + body):
+> ## How far is ASTY Cabin from Asan Medical Center?
+>
+> ASTY Cabin is 15 minutes from Asan Medical Center by taxi or 20 minutes by subway via Line 3.
+>
+> Most international patients prefer a morning taxi for clinic appointments because…
+
+Hard rules:
+- The line directly under each H2 is **one sentence, 30–80 characters**, contains an atomic
+  fact (number / distance / price / yes-no), no preamble.
+- After that direct-answer line, leave a blank line, then start the body paragraph(s).
+- H2 must contain primary_keyword in at least the first H2 (kept from prior rule).
+- No cute clickbait; phrase the H2 as someone would actually type into Google or ChatGPT.
+
+If the topic doesn't naturally suit a question-format H2 (rare), fall back to imperative
+("How to …") or definition ("What is …"). Pure noun phrases are not allowed for H2.
 
 ### Blockquote (use 0–1 per article)
 - Prefix a single-line-pulled-quote with `> ` on its own paragraph when you have a
@@ -131,6 +155,26 @@ Use one definition sentence per major concept introduced.
 - **meta_description**: must contain primary_keyword within the first 60 chars
 - **Body**: use primary_keyword 2–3 times naturally; secondary keywords 1–2 times each
 - **No keyword stuffing** — if it reads unnaturally, rephrase
+
+### H1 title — AEO question-or-action format
+
+The H1 must be either:
+- A direct user question (`How Much Does Long-Stay Housing in Seoul Cost?`), OR
+- An imperative how-to (`How to Get from Incheon Airport to ASTY Cabin Seoul`), OR
+- A definition/promise (`Serviced Residence Near Asan Medical Center: 2026 Guide`), OR
+- A comparison (`Serviced Residence vs Hotel in Seoul — Which Is Better for Long Stays?`)
+
+Bad H1s (too AI-flavored or too vague):
+- "Discover the Best…" / "Ultimate Guide to…" / "Everything You Need to Know"
+- Single-word vague titles
+- Titles without an entity, distance, time, or comparison anchor
+
+If the director-supplied input has an `aeo_format` field, follow it strictly:
+- `definition` → "What is X?" or "X: 2026 Definition Guide"
+- `comparison` → "X vs Y — Which Is Better?" with a comparison table in body
+- `guide` → step-numbered "How to …" or numbered checklist
+- `list` → "Top N …" / "5 Best …" with explicit count in title
+- `data` → number-led "How Much Does …" / "X Costs in 2026"
 
 ## Internal Link Placeholders
 
@@ -222,12 +266,33 @@ into citations more reliably than narrative comparisons.
 
 Keep cells short (3–6 words) so they survive HTML-to-text extraction. Limit to 4–6 rows.
 
+For articles tagged `aeo_format: "comparison"` from the director, a comparison table is
+**required** (not optional). Place it in the body, ideally under a "## How does X compare to
+Y?" H2. Recommended row labels for ASTY-cabin: Stay length / Kitchen / Cost (>14 days) /
+Privacy / Address access / Booking flexibility — pick 4–6 rows that match the topic.
+
+## Last-updated footer (E-E-A-T signal)
+
+The article's last paragraph (after the FAQ, before or as the CTA) should include a small
+freshness/source line. This raises both classical SEO trust and AI-engine citation rate:
+
+```
+*Last updated: <Month YYYY>* — *Source: ASTY Cabin Editorial team, Songpa-gu Seoul.*
+```
+
+Use the actual current month (the orchestrator passes today's date in the brief). Keep it
+italic, single line. Do not invent a more authoritative-sounding source.
+
 ## Self-check before saving
 
 Structure (AEO):
+- [ ] **H1 title** is question-form, imperative how-to, definition, or comparison (no vague nouns)
 - [ ] **Quick Answer block** present immediately after H1 (40–80 words, contains atomic fact + entity)
+- [ ] **Every H2 is a question** (e.g. "How far is …?") followed by a 30–80 char direct-answer line
 - [ ] **FAQ section** present with 3–5 Q&A pairs in exact `**Q: …**` / `A: …` format
 - [ ] At least one **definition sentence** introducing a key concept (`X is …`)
+- [ ] If `aeo_format=comparison`: a comparison table (4–6 rows, 3–6 word cells) is present
+- [ ] **Last-updated footer** at end (italic, includes month + ASTY Cabin Editorial source)
 - [ ] All distances/times/prices are in scannable form (e.g. "5-min walk", "₩700,000/week")
 - [ ] Named entities used explicitly (no "the nearby hospital" — use "Asan Medical Center")
 

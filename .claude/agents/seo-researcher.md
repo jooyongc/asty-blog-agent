@@ -37,6 +37,22 @@ and re-invoke you with the JSON rows. If GSC is not yet wired, fall back to exte
 5. Estimate difficulty: low / medium / high based on SERP competition signals (or `avg_position` when striking-distance).
 6. Flag cannibalization risk if any `existing_titles` overlap strongly with the chosen `primary_keyword`.
 
+## AEO question-form variants (mandatory)
+
+For every keyword you select, also produce **AEO question-form variants** — the way a real
+user types the same intent into ChatGPT, Perplexity, Google AI Overview, or Google's
+"People Also Ask". These drive answer-engine citations, which classical keywords don't.
+
+Conversion rules:
+- "serviced residence Seoul" → "What is a serviced residence in Seoul?"
+- "long stay Seoul apartment" → "Where is the best long-term apartment in Seoul?"
+- "monthly rental Seoul" → "How much does a monthly apartment rental in Seoul cost?"
+- "accommodation near Asan" → "What accommodation is near Asan Medical Center Seoul?"
+- "corporate housing Seoul" → "What is corporate housing in Seoul and how does it work?"
+
+Produce 2–3 question-form variants per article. Pick the one that best matches actual
+"People Also Ask" data when available.
+
 ## Output format (STRICT — output only this JSON, nothing else)
 
 ```json
@@ -44,6 +60,7 @@ and re-invoke you with the JSON rows. If GSC is not yet wired, fall back to exte
   "topic": "<original topic>",
   "primary_keyword": "<3-5 word phrase>",
   "secondary_keywords": ["<phrase 2>", "<phrase 3>"],
+  "aeo_question_variants": ["<full sentence question 1>", "<question 2>", "<question 3>"],
   "search_intent": "informational | commercial | navigational",
   "estimated_difficulty": "low | medium | high",
   "source": "gsc_striking | external_search | hybrid",

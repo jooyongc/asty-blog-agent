@@ -19,6 +19,8 @@ export async function POST(req: NextRequest) {
     rationale?: string
     seo_score?: number
     primary_keyword_hint?: string
+    pillar?: 'long-stay' | 'medical' | 'corporate' | 'off-pillar'
+    aeo_format?: 'definition' | 'comparison' | 'guide' | 'list' | 'data'
     source_direction?: string
     status?: 'proposed' | 'approved' | 'in_progress' | 'published' | 'rejected'
     user_note?: string

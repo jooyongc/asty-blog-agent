@@ -77,17 +77,24 @@ Rules:
 `meta_description` is the OTHER thing answer engines look at. Make every char count.
 
 EN rules (140–160 chars):
+- **Front-load a direct answer** to the article's implicit question in the first sentence.
+  AI engines surface meta descriptions in answer cards when the body's Quick Answer is
+  too long; the first 100 chars need to stand alone as a citation.
 - Front-load the **primary_keyword** within the first 60 chars.
 - Include at least one atomic fact (number/distance/price) when applicable.
 - End with a soft CTA verb that doesn't trigger spam filters ("Plan your stay", "Book direct",
   "Compare options"). Avoid "Click here", "Learn more".
 - Mirror a long-tail variant of how a real user would search.
 
-Example (medical-tourism article):
-> "Stay near Asan Medical Center & Samsung Hospital with ASTY Cabin in Songpa-gu Seoul. Fully
-> furnished apartments, 15 min to top hospitals, weekly rates from ₩700,000. Book direct."
+Title format alignment: if the article's H1 is question-form, the meta_description should
+read as the answer to that question (matching pair). Example:
+- H1: "How Far Is ASTY Cabin from Asan Medical Center?"
+- meta_description: "ASTY Cabin is 15 min from Asan Medical Center by taxi or 20 min by
+  Line 3 from Garak Market Station. Fully furnished apartments, weekly rates from ₩700,000.
+  Plan your medical stay."
 
-JA / ZH meta_description: same intent, language-appropriate length.
+JA / ZH meta_description: same intent, language-appropriate length. Mirror question-answer
+pairing when JA/ZH titles are translated as questions.
 
 ## Rules
 

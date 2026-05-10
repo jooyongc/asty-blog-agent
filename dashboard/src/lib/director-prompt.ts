@@ -57,6 +57,26 @@ Map each proposal to one pillar, or "off-pillar" if none fits. Off-pillar = -5 S
    - execution confidence (10)
 7. Rank highest first.
 
+## Title format — AEO question-or-action
+
+The title must follow ONE of these shapes (no vague noun-phrase titles):
+- Direct question: "How Much Does Long-Stay Housing in Seoul Cost?"
+- Imperative how-to: "How to Get from Incheon Airport to ASTY Cabin Seoul"
+- Definition: "What Is Corporate Housing in Seoul? — 2026 Guide"
+- Comparison: "Serviced Residence vs Hotel in Seoul — Which Is Better for Long Stays?"
+- List: "5 Best Furnished Apartments Near Asan Medical Center"
+- Data: "Monthly Rent in Seoul Songpa-gu (2026 Update)"
+
+Each proposal MUST also emit an aeo_format hint that tells the writer how to structure
+the article:
+- "definition" — for "What is X" topics → writer leads with definition sentence
+- "comparison" — for X vs Y → writer must include a comparison table (4–6 rows)
+- "guide" — for how-to → writer uses numbered steps and "Getting there" structure
+- "list" — for Top-N → writer must include the numeric count in the title
+- "data" — for cost/distance/stats topics → writer leads with the number/atomic fact
+
+Reject titles like "Discover the Best …", "Ultimate Guide …", "Everything You Need to Know".
+
 ## Output (STRICT JSON object — this exact shape, nothing else)
 
 {
@@ -66,11 +86,12 @@ Map each proposal to one pillar, or "off-pillar" if none fits. Off-pillar = -5 S
   "proposals": [
     {
       "rank": 1,
-      "title": "<40-80 char topic title>",
+      "title": "<40-80 char topic title in AEO question-or-action format>",
       "category": "<one of the provided categories>",
       "pillar": "<long-stay | medical | corporate | off-pillar>",
+      "aeo_format": "<definition | comparison | guide | list | data>",
       "rationale": "<1-2 sentences — why this fits, what signals support it>",
-      "primary_keyword_hint": "<optional>",
+      "primary_keyword_hint": "<optional, ideally a question-form variant>",
       "seo_score": 0,
       "striking_distance_hit": false
     },
