@@ -58,23 +58,27 @@ export async function GET(req: NextRequest) {
   const cacheBust = `_t=${Date.now()}`
 
   try {
-    const [topicsRes, postsRes] = await Promise.all([
-      fetch(`${site.site_url}/api/admin/queue/topic?site_id=${encodeURIComponent(siteId)}&limit=100&${cacheBust}`, { headers, cache: 'no-store' }),
+    // Use /api/admin/queue/export — same endpoint the /queue page consumes,
+    // already returns the topic_queue rows we need. The dedicated
+    // /api/admin/queue/topic endpoint requires a separate auth contract that
+    // this dashboard bearer doesn't satisfy.
+    const [queueRes, postsRes] = await Promise.all([
+      fetch(`${site.site_url}/api/admin/queue/export?site_id=${encodeURIComponent(siteId)}&${cacheBust}`, { headers, cache: 'no-store' }),
       fetch(`${site.site_url}/api/admin/posts/export?limit=100&${cacheBust}`, { headers, cache: 'no-store' }),
     ])
 
-    if (!topicsRes.ok) {
-      const t = await topicsRes.text()
-      return NextResponse.json({ error: `Site queue API ${topicsRes.status}`, detail: t }, { status: 502 })
+    if (!queueRes.ok) {
+      const t = await queueRes.text()
+      return NextResponse.json({ error: `Site queue API ${queueRes.status}`, detail: t }, { status: 502 })
     }
 
-    const topicsJson = (await topicsRes.json()) as { rows?: RawTopic[] }
+    const queueJson = (await queueRes.json()) as { topic_queue?: RawTopic[] }
     const postsJson = postsRes.ok ? (await postsRes.json()) as { posts?: Array<{ slug: string; status: string }> } : { posts: [] }
     const publishedSlugs = new Set(
       (postsJson.posts ?? []).filter((p) => p.status === 'published').map((p) => p.slug),
     )
 
-    const topics: RawTopic[] = topicsJson.rows ?? []
+    const topics: RawTopic[] = queueJson.topic_queue ?? []
 
     // Slug guess function (mirrors weekly-auto.mts)
     function slugify(title: string): string {
