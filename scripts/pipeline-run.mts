@@ -123,6 +123,16 @@ const verJson = extractJson<{
   citability_score?: number
   citability_band?: string
 }>(verText)
+// Belt-and-suspenders: enforce 'partial' downgrade when citability is weak,
+// in case the LLM forgot to apply the rule itself. 'blocked' (contradicted
+// claims) always wins over 'partial'.
+if (
+  typeof verJson.citability_score === 'number' &&
+  verJson.citability_score < 50 &&
+  verJson.overall_status === 'verified'
+) {
+  verJson.overall_status = 'partial'
+}
 fs.writeFileSync(path.join(DRAFT_DIR, 'verification.json'), JSON.stringify(verJson, null, 2))
 const cit = verJson.citability_score != null ? ` citability=${verJson.citability_score}` : ''
 console.log(`  ${verJson.overall_status}${cit}`)
