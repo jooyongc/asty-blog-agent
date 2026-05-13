@@ -116,9 +116,16 @@ const verText = await callHaiku(
   JSON.stringify({ slug: SLUG, draft_markdown: enMd, research_brief: seoJson }),
   3000,
 )
-const verJson = extractJson<{ overall_status: string; summary: Record<string, number>; claims_total: number }>(verText)
+const verJson = extractJson<{
+  overall_status: string
+  summary: Record<string, number>
+  claims_total: number
+  citability_score?: number
+  citability_band?: string
+}>(verText)
 fs.writeFileSync(path.join(DRAFT_DIR, 'verification.json'), JSON.stringify(verJson, null, 2))
-console.log(`  ${verJson.overall_status}`)
+const cit = verJson.citability_score != null ? ` citability=${verJson.citability_score}` : ''
+console.log(`  ${verJson.overall_status}${cit}`)
 
 const totalIn = Object.values(totals).reduce((n, v) => n + v.in, 0)
 const totalOut = Object.values(totals).reduce((n, v) => n + v.out, 0)

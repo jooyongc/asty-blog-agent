@@ -5,7 +5,9 @@ node_modules/
 .DS_Store
 dist/
 .vercel
-reports/
+# Generated freshness/scoring reports at the agent repo root only.
+# Anchor with leading slash so dashboard/src/app/reports (page source) isn't matched.
+/reports/
 
 # Deployment secrets (includes DASHBOARD_MASTER_KEY)
 docs/multi-blog-monetization/workspaces/DEPLOYMENT-SECRETS.md

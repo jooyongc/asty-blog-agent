@@ -64,6 +64,14 @@ function parseFaq(body: string): FaqItem[] {
 function buildArticleSchema(fm: Record<string, unknown>, meta: Record<string, unknown>): object {
   const translations = meta.translations as Record<string, { title: string; meta_description: string }>;
   const featuredImage = meta.featured_image as { url?: string; alt?: string } | undefined;
+  // GEO/AEO: dateModified is a strong freshness signal for AI engines. If the
+  // pipeline (or affiliate insertion) updated the post, prefer that timestamp;
+  // otherwise fall back to publish_at.
+  const datePublished = (meta.publish_at as string | null) ?? new Date().toISOString();
+  const dateModified =
+    (meta.updated_at as string | null) ??
+    (meta.last_modified as string | null) ??
+    datePublished;
 
   return {
     '@context': 'https://schema.org',
@@ -77,6 +85,7 @@ function buildArticleSchema(fm: Record<string, unknown>, meta: Record<string, un
     },
     publisher: {
       '@type': 'Organization',
+      '@id': `${SITE_URL}/#lodging`, // links to the LodgingBusiness entity emitted in layout
       name: 'ASTY Cabin',
       url: SITE_URL,
       logo: {
@@ -84,8 +93,9 @@ function buildArticleSchema(fm: Record<string, unknown>, meta: Record<string, un
         url: `${SITE_URL}/images/logo.png`,
       },
     },
-    datePublished: (meta.publish_at as string | null) ?? new Date().toISOString(),
-    dateModified: (meta.publish_at as string | null) ?? new Date().toISOString(),
+    datePublished,
+    dateModified,
+    inLanguage: 'en',
     mainEntityOfPage: {
       '@type': 'WebPage',
       '@id': `${SITE_URL}/en/blog/${SLUG}`,

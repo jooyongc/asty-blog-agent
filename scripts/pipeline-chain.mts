@@ -154,7 +154,12 @@ const enMd = fs.readFileSync(path.join(DRAFT_DIR, 'en.md'), 'utf8').replace(/^--
 const jaMd = fs.readFileSync(path.join(DRAFT_DIR, 'ja.md'), 'utf8').replace(/^---[\s\S]*?---/, '').trim()
 const zhMd = fs.readFileSync(path.join(DRAFT_DIR, 'zh.md'), 'utf8').replace(/^---[\s\S]*?---/, '').trim()
 const ver = JSON.parse(fs.readFileSync(path.join(DRAFT_DIR, 'verification.json'), 'utf8'))
-const qs = ver.claims_total > 0 ? Math.round((ver.summary.verified / ver.claims_total) * 100) : 80
+// Quality score = 60% fact-verification + 40% AEO citability.
+// AI engines won't cite us if claims are wrong (fact accuracy), but they also
+// won't cite us if the structure is unscannable (citability). Both matter.
+const factPct = ver.claims_total > 0 ? (ver.summary.verified / ver.claims_total) * 100 : 80
+const citability = typeof ver.citability_score === 'number' ? ver.citability_score : 60
+const qs = Math.round(factPct * 0.6 + citability * 0.4)
 
 const key = process.env.ASTY_AGENT_API_KEY
 if (!key) throw new Error('ASTY_AGENT_API_KEY missing')
